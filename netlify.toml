@@ -2,22 +2,8 @@
 # https://docs.netlify.com/configure-builds/file-based-configuration/
 
 [build]
-  command = "npm run build"
+  command = "node generate-redirects.js && npm run build"
   publish = "dist"
-  functions = "netlify/functions"
 
 [build.environment]
   VITE_API_URL = "/api"
-
-# Proxy /api/* to backend (set BACKEND_URL in Netlify UI → Environment variables)
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api?path=:splat"
-  status = 200
-  force = true
-
-# SPA fallback: serve index.html for all other routes so client-side routing works (direct links, refresh)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
