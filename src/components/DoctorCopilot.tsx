@@ -56,7 +56,7 @@ const DoctorCopilot = ({ patientId, patientName }: DoctorCopilotProps) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`, "X-Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({ patient_id: patientId }),
       });
@@ -103,7 +103,7 @@ const DoctorCopilot = ({ patientId, patientName }: DoctorCopilotProps) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`, "X-Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({ messages: updatedMessages, patient_id: patientId }),
       });

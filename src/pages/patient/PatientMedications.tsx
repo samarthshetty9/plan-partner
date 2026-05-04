@@ -69,7 +69,7 @@ const PatientMedications = () => {
       const token = getStoredToken();
       const res = await fetch(`${API_BASE}/me/medications/upload-prescription`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: token ? { Authorization: `Bearer ${token}`, "X-Authorization": `Bearer ${token}` } : {},
         body: formData,
       });
       if (!res.ok) {

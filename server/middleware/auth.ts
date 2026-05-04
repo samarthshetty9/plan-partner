@@ -11,7 +11,7 @@ function getTestUserId(token: string): string | null {
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization || (req.headers["x-authorization"] as string);
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {
@@ -37,7 +37,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
 /** Optional auth: sets req.user if token present, does not 401. */
 export async function optionalAuth(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization || (req.headers["x-authorization"] as string);
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {

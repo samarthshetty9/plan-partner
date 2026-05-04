@@ -134,7 +134,7 @@ const PatientCaseSubmit = () => {
         const token = getStoredToken();
         const res = await fetch(`${API_BASE}/me/patient_documents/upload`, {
           method: "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: token ? { Authorization: `Bearer ${token}`, "X-Authorization": `Bearer ${token}` } : {},
           body: formData,
         });
         if (!res.ok) throw new Error("Upload failed");

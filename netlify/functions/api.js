@@ -29,8 +29,10 @@ exports.handler = async (event) => {
   const url = `${base}/api${finalPath}${query}`;
 
   const headers = { "Content-Type": "application/json" };
-  if (event.headers.authorization) headers["Authorization"] = event.headers.authorization;
-  if (event.headers["content-type"]) headers["Content-Type"] = event.headers["content-type"];
+  const authHeader = event.headers.authorization || event.headers.Authorization || event.headers["x-authorization"] || event.headers["X-Authorization"];
+  if (authHeader) headers["Authorization"] = authHeader;
+  const contentTypeHeader = event.headers["content-type"] || event.headers["Content-Type"];
+  if (contentTypeHeader) headers["Content-Type"] = contentTypeHeader;
 
   // Netlify may send body base64-encoded (e.g. multipart/form-data); decode so backend receives raw body
   let body = event.body;

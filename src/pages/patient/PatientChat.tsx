@@ -221,7 +221,7 @@ const PatientChat = ({ onOpenMenu }: { onOpenMenu: () => void }) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`, "X-Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({ messages: updatedMessages }),
       });
@@ -456,7 +456,7 @@ const PatientChat = ({ onOpenMenu }: { onOpenMenu: () => void }) => {
         formData.append("file", quickFoodFile);
         const res = await fetch(`${API_BASE}/me/meal-image-upload`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${getStoredToken()}` },
+          headers: { Authorization: `Bearer ${getStoredToken()}`, "X-Authorization": `Bearer ${getStoredToken()}` },
           body: formData,
         });
         if (!res.ok) throw new Error("Upload failed");

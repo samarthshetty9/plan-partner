@@ -144,7 +144,7 @@ const PatientOverview = () => {
         const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
         const res = await fetch(`${API_BASE}/me/meal-image-upload`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${getStoredToken()}` },
+          headers: { Authorization: `Bearer ${getStoredToken()}`, "X-Authorization": `Bearer ${getStoredToken()}` },
           body: formData,
         });
         if (!res.ok) throw new Error("Upload failed");

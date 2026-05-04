@@ -97,7 +97,7 @@ const DoctorDocuments = () => {
         ? await api.upload<DocDetail>(path, formData)
         : await fetch(`${API_BASE}/${path}`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${getStoredToken()}` },
+            headers: { Authorization: `Bearer ${getStoredToken()}`, "X-Authorization": `Bearer ${getStoredToken()}` },
             body: formData,
           }).then((r) => r.ok ? r.json() : Promise.reject(new Error("Upload failed")));
       toast({ title: analyze ? "Document uploaded and analyzed" : "Document uploaded" });
@@ -127,7 +127,7 @@ const DoctorDocuments = () => {
     if (!token) return;
     try {
       const res = await fetch(`${API_BASE}/patient_documents/${docId}/file`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, "X-Authorization": `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Download failed");
       const blob = await res.blob();

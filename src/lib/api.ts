@@ -25,7 +25,10 @@ export function setStoredDoctorToken(token: string | null) {
 async function getAuthHeaders(): Promise<HeadersInit> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const token = getStoredToken();
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+    headers["X-Authorization"] = `Bearer ${token}`; // bypass Netlify stripping
+  }
   return headers;
 }
 
@@ -110,7 +113,7 @@ export const api = {
   async getFeedbackVideoUrl(feedbackId: string): Promise<string> {
     const token = getStoredToken() || getStoredDoctorToken();
     const res = await fetch(buildUrl(`feedbacks/${feedbackId}/video`), {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: token ? { Authorization: `Bearer ${token}`, "X-Authorization": `Bearer ${token}` } : {},
       ...noCache,
     });
     if (!res.ok) throw new Error("Video not found");
