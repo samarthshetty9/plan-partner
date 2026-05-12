@@ -1,13 +1,5 @@
 import { Building2, CheckCircle2, Quote } from "lucide-react";
 
-const logoBar = [
-  { src: "/logos/manipal.png", alt: "Manipal Academy of Higher Education" },
-  { src: "/logos/karnataka.svg", alt: "Government of Karnataka" },
-  { src: "/logos/apollo.svg", alt: "Apollo Hospitals" },
-  { src: "/logos/nimhans.svg", alt: "NIMHANS" },
-  { src: "/logos/kshema.svg", alt: "KSHEMA" },
-];
-
 const partners = [
   {
     category: "Incubation",
@@ -58,20 +50,6 @@ const BackedBySection = () => (
         <p className="text-muted-foreground max-w-2xl mx-auto">
           Incubated by Manipal, certified by Karnataka government, partnered with India's leading hospitals.
         </p>
-      </div>
-
-      {/* Logo bar */}
-      <div className="max-w-4xl mx-auto mb-10 sm:mb-14">
-        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
-          {logoBar.map((logo) => (
-            <img
-              key={logo.alt}
-              src={logo.src}
-              alt={logo.alt}
-              className="h-10 sm:h-12 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity grayscale hover:grayscale-0"
-            />
-          ))}
-        </div>
       </div>
 
       {/* Partner detail cards */}

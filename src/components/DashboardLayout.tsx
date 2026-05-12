@@ -6,7 +6,6 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 import {
   LayoutDashboard,
   Users,
-  Layers,
   UserPlus,
   CalendarDays,
   LogOut,
@@ -31,7 +30,6 @@ const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/dashboard/patients", icon: Users, label: "Patients" },
   { to: "/dashboard/care-plans", icon: ClipboardList, label: "Care Plans" },
-  { to: "/dashboard/programs", icon: Layers, label: "Programs" },
   { to: "/dashboard/enrollments", icon: UserPlus, label: "Enrollments" },
   { to: "/dashboard/appointments", icon: CalendarDays, label: "Appointments" },
   { to: "/dashboard/availability", icon: Clock, label: "Availability" },

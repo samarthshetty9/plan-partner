@@ -21,7 +21,6 @@ import {
   Phone,
   Search,
   Briefcase,
-  BookOpen,
   HeartPulse,
 } from "lucide-react";
 import { PatientPwaLink } from "@/components/PatientPwaLink";
@@ -32,8 +31,7 @@ const navItems = [
   { to: "/patient/overview", icon: Home, label: "Overview" },
   { to: "/patient/cases/new", icon: Search, label: "Request Treatment" },
   { to: "/patient/cases", icon: Briefcase, label: "My Cases" },
-  { to: "/patient/programs", icon: BookOpen, label: "My Programs" },
-  { to: "/patient/care-plan", icon: HeartPulse, label: "Care Plan" },
+  { to: "/patient/care-plan", icon: HeartPulse, label: "Care Plans", exact: true },
   { to: "/patient/care-plan/channel", icon: Activity, label: "Care Plan Channel" },
   { to: "/patient/accountability", icon: Users, label: "Family & visibility" },
   { to: "/patient/connect-doctor", icon: Link2, label: "Connect to doctor" },

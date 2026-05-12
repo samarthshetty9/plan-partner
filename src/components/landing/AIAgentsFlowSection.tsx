@@ -1,4 +1,4 @@
-import { MessageSquare, Bot, Phone, Bell, BarChart3, ArrowRight, Zap } from "lucide-react";
+import { MessageSquare, Bot, Bell, BarChart3, ArrowRight, Zap } from "lucide-react";
 
 const flowSteps = [
   {
@@ -9,7 +9,7 @@ const flowSteps = [
   },
   {
     icon: Bot,
-    label: "AI Agent processes & responds",
+    label: "Smart engine processes & responds",
     sublabel: "Parses food, logs vitals, answers queries",
     color: "bg-primary",
   },
@@ -28,8 +28,7 @@ const flowSteps = [
 ];
 
 const automations = [
-  { icon: Bell, title: "Appointment Reminders", desc: "AI sends confirm/reschedule via WhatsApp 24h before" },
-  { icon: Phone, title: "Voice Check-ins", desc: "AI calls patients for medication compliance checks" },
+  { icon: Bell, title: "Appointment Reminders", desc: "Automatically sends confirm/reschedule via WhatsApp 24h before" },
   { icon: Bot, title: "Care Program Follow-ups", desc: "Daily/weekly automated check-ins per care plan" },
   { icon: Zap, title: "Smart Escalation", desc: "Flags critical readings and notifies doctor instantly" },
 ];
@@ -43,7 +42,7 @@ const AIAgentsFlowSection = () => (
           Fully Autonomous
         </span>
         <h2 className="text-3xl sm:text-4xl font-heading font-extrabold text-foreground">
-          How AI agents run your clinic
+          How your clinic runs on autopilot
         </h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
           From the moment a patient sends a message to real-time doctor insights — every step is automated. No staff involvement needed.

@@ -1,7 +1,6 @@
 import {
   MessageSquare,
   Activity,
-  Phone,
   BarChart3,
   Shield,
   Calendar,
@@ -17,28 +16,21 @@ import type { ContactType } from "@/components/ContactDialog";
 const clinicFeatures = [
   {
     icon: MessageSquare,
-    title: "AI WhatsApp Agent",
+    title: "WhatsApp Automation",
     description:
-      "Handles reminders, 2-way messaging, and booking — no staff effort. Patients reply on WhatsApp, AI handles the rest.",
+      "Handles reminders, 2-way messaging, and booking — no staff effort. Patients reply on WhatsApp, the system handles the rest.",
     tag: "Zero Manual Work",
   },
   {
     icon: Activity,
     title: "Autonomous Care Programs",
     description:
-      "AI agents run NCD management, post-discharge care, and elder-care workflows end-to-end, automatically.",
+      "Runs NCD management, post-discharge care, and elder-care workflows end-to-end, automatically.",
     tag: "Automated",
   },
   {
-    icon: Phone,
-    title: "AI Voice Check-ins",
-    description:
-      "Voice calls in 10+ Indian languages for medication compliance, symptom assessment, and auto-escalation.",
-    tag: "Multilingual",
-  },
-  {
     icon: BarChart3,
-    title: "AI-Powered Analytics",
+    title: "Clinic Analytics",
     description:
       "Patient adherence rates, at-risk flags, revenue insights, and compliance reports — all automated.",
     tag: "Insights",
@@ -47,14 +39,14 @@ const clinicFeatures = [
     icon: Shield,
     title: "Patient Health Vault",
     description:
-      "Centralized records — appointments, labs, medications, vitals — auto-organized by AI. Secure sharing with vault codes.",
+      "Centralized records — appointments, labs, medications, vitals — auto-organized. Secure sharing with vault codes.",
     tag: "Secure",
   },
   {
     icon: Calendar,
     title: "Smart Scheduling",
     description:
-      "AI handles appointment reminders, confirmations, rescheduling, and no-show follow-ups via WhatsApp.",
+      "Automatically handles appointment reminders, confirmations, rescheduling, and no-show follow-ups via WhatsApp.",
     tag: "Scheduling",
   },
 ];
@@ -94,10 +86,10 @@ const ClinicHospitalSection = ({ onContact }: { onContact: (type: ContactType) =
           For Clinics & Hospitals
         </span>
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold text-foreground">
-          AI agents that <span className="text-gradient">run your clinic</span>
+          automation that <span className="text-gradient">runs your clinic</span>
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          No manual follow-ups, no missed reminders. Our AI agents handle patient engagement,
+          No manual follow-ups, no missed reminders. Our platform handles patient engagement,
           care programs, and scheduling — zero staff effort required.
         </p>
       </div>

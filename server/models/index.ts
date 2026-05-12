@@ -1005,6 +1005,22 @@ const CarePlanSchema = new mongoose.Schema(
         goal: String,
       },
     ],
+    days: [
+      {
+        day: Number,
+        theme: String,
+        tasks: [
+          {
+            id: String,
+            title: String,
+            description: String,
+            type: { type: String, enum: ["vital", "medicine", "action", "education"], default: "action" },
+            timeOfDay: String,
+            points: { type: Number, default: 10 },
+          },
+        ],
+      },
+    ],
   },
   { timestamps: { createdAt: "created_at" }, toJSON: toJsonOptions }
 );

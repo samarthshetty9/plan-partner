@@ -1046,6 +1046,146 @@ router.post("/care-plans/ai-generate", requireAuth, async (req, res) => {
   });
 });
 
+// ─── POST /care-plans/wizard-generate — Gemini day-by-day plan builder ───
+router.post("/care-plans/wizard-generate", requireAuth, async (req, res) => {
+  const { category, duration_days, clinical_params: cp = {}, plan_name } = req.body;
+  if (!category) return res.status(400).json({ error: "category required" });
+  const dur = Math.max(1, Number(duration_days) || 30);
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return res.status(500).json({ error: "GEMINI_API_KEY not configured" });
+
+  const COLOR: Record<string, string> = {
+    diabetes: "#16a34a", ortho: "#0369a1", hair: "#7c3aed",
+    weight_loss: "#ea580c", cardio: "#dc2626", custom: "#2563eb",
+  };
+  const coverColor = COLOR[category] ?? "#2563eb";
+
+  // Safely convert a value that may be a string, array, or undefined to a comma-joined string
+  const toList = (val: any, fallback: string): string => {
+    if (!val) return fallback;
+    if (Array.isArray(val)) return val.join(", ") || fallback;
+    if (typeof val === "string") return val.trim() || fallback;
+    return fallback;
+  };
+
+  const categoryPrompts: Record<string, string> = {
+    diabetes: `You are a clinical care programme designer for diabetes management in India.
+Generate a ${dur}-day diabetic care programme with day-by-day tasks.
+Patient Profile: ${cp.patient_profile || "general Type 2 diabetic"}
+Monitoring: ${toList(cp.monitoring, "fasting_glucose, postmeal_glucose")}
+Medications: ${toList(cp.medications, "oral antidiabetics")}
+HbA1c Target: ${cp.hba1c_target || "7"}%
+Complications to screen: ${toList(cp.complications, "standard set")}
+
+Rules:
+- Return EXACTLY ${dur} day objects
+- Each day: 2-4 tasks; vary types across the week
+- Types: vital=glucose/BP readings (points 10), medicine=medication log (points 5), action=exercise/foot check/photo (points 10), education=tip (points 5)
+- Day 1: onboarding & baseline; days 7/14/21/30: milestone recap; every ~10th day: complication screen
+- Be specific to diabetes — include fasting glucose, post-meal glucose, foot care, medication adherence`,
+
+    ortho: `You are a physiotherapist specialising in orthopaedic rehabilitation.
+Generate a ${dur}-day rehab programme.
+Condition: ${cp.condition || "general musculoskeletal"}
+Affected area: ${cp.affected_area || "not specified"}
+Rehab phase: ${cp.phase || "sub-acute"}
+Intensity: ${cp.intensity || "moderate"}
+Restrictions: ${toList(cp.restrictions, "none")}
+
+Rules:
+- Return EXACTLY ${dur} day objects
+- Each day: 2-4 tasks: vital=pain scale/ROM (10pts), medicine=pain meds (5pts), action=exercise/stretch (10pts), education=technique tip (5pts)
+- Progressive load: gentle Week 1 → strength Week 2 → functional Week 3+
+- Day 1: baseline assessment; day 7: strength intro; day 14: functional exercises
+- Exercises specific to ${cp.affected_area || "the affected area"}`,
+
+    hair: `You are a trichologist specialising in hair loss and scalp health.
+Generate a ${dur}-day hair restoration programme.
+Hair loss type: ${cp.hair_loss_type || "androgenetic alopecia"}
+Treatment: ${toList(cp.treatment, "topical minoxidil")}
+Monitoring: ${toList(cp.monitoring, "scalp photos, shedding log")}
+
+Rules:
+- Return EXACTLY ${dur} day objects
+- 2-3 tasks/day: medicine=serums/supplements (5pts), action=scalp massage/photos/wash (10pts), vital=shedding count (10pts), education=hair tip (5pts)
+- Day 1: baseline photos; every 7th day: progress photo + shedding assessment
+- Include massage technique, PH-balanced wash schedule, nutrition reminders`,
+
+    weight_loss: `You are a bariatric nutritionist and fitness coach.
+Generate a ${dur}-day weight management programme for Indian patients.
+Approach: ${cp.approach || "calorie deficit"}
+Starting activity: ${cp.activity_level || "sedentary"}
+Focus: ${cp.focus || "diet and exercise"}
+
+Rules:
+- Return EXACTLY ${dur} day objects
+- 2-4 tasks/day: vital=weight/waist log (10pts), action=exercise/steps (10pts), education=nutrition tip (5pts), medicine=supplement (5pts)
+- Progressive: Foundation wk1 → Habit building wk2 → Intensify wk3+
+- Include Indian diet-specific guidance`,
+
+    cardio: `You are a cardiologist specialising in cardiac rehabilitation.
+Generate a ${dur}-day cardiac care programme.
+Condition: ${cp.condition || "hypertension"}
+Monitoring: ${toList(cp.monitoring, "bp, weight")}
+Intensity: ${cp.intensity || "low"}
+
+Rules:
+- Return EXACTLY ${dur} day objects
+- 2-4 tasks/day: vital=BP/weight (10pts), medicine=cardiac meds (5pts), action=walking/breathing (10pts), education=heart health tip (5pts)
+- Conservative progression; include sodium reduction, stress management
+- Milestone days: warnings about danger signs`,
+
+    custom: `You are a clinical care programme designer.
+Generate a ${dur}-day custom care programme.
+Condition: ${cp.condition || "general wellness"}
+Goals: ${cp.goals || "improve health outcomes"}
+What to track: ${cp.track || "vitals and lifestyle"}
+Special instructions: ${cp.instructions || "none"}
+
+Rules:
+- Return EXACTLY ${dur} day objects
+- 2-4 tasks/day with appropriate types and points
+- Be specific to the condition described`,
+  };
+
+  const categoryPrompt = categoryPrompts[category] ?? categoryPrompts.custom;
+  const defaultName = plan_name || `${dur}-Day ${category.replace("_", " ").replace(/\b\w/g, (c: string) => c.toUpperCase())} Programme`;
+
+  const prompt = `${categoryPrompt}
+
+Return ONLY raw valid JSON with NO markdown fences:
+{
+  "name": "${defaultName}",
+  "description": "One sentence describing the programme.",
+  "days": [
+    {
+      "day": 1,
+      "theme": "...",
+      "tasks": [
+        {"id": "d1-t1", "title": "...", "description": "...", "type": "vital", "points": 10}
+      ]
+    }
+  ]
+}`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+    const rawText = (response.text || "").trim();
+    // Extract the JSON object — strip markdown fences or any prose wrapper
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Gemini returned no JSON object in response");
+    const data = JSON.parse(jsonMatch[0]);
+    if (!data.days || !Array.isArray(data.days)) throw new Error("Gemini response missing 'days' array");
+    return res.json({ name: data.name, description: data.description, cover_color: coverColor, days: data.days });
+  } catch (err: any) {
+    console.error("Wizard Gemini error:", err?.message || err, err?.stack);
+    return res.status(500).json({ error: "Failed to generate plan — " + (err?.message || "unknown error") });
+  }
+});
+
 // ─── POST /care-plans/create — Doctor creates a care plan ───
 router.post("/care-plans/create", requireAuth, async (req, res) => {
   const userId = (req as AuthRequest).user.id;
@@ -1054,7 +1194,7 @@ router.post("/care-plans/create", requireAuth, async (req, res) => {
     return res.status(403).json({ error: "Only doctors can create care plans" });
   }
 
-  const { name, slug, condition, duration_days, description, cover_color, scoring_rules, reward_tiers, week_themes } = req.body;
+  const { name, slug, condition, duration_days, description, cover_color, scoring_rules, reward_tiers, week_themes, days } = req.body;
   if (!name || !condition) return res.status(400).json({ error: "name and condition required" });
 
   // Ensure unique slug
@@ -1072,6 +1212,7 @@ router.post("/care-plans/create", requireAuth, async (req, res) => {
     scoring_rules: scoring_rules || {},
     reward_tiers: reward_tiers || [],
     week_themes: week_themes || [],
+    days: days || [],
     is_active: true,
     created_by: userId,
   });

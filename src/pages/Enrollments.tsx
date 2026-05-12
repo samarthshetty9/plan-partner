@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
-import { Plus, X, UserPlus, TrendingUp } from "lucide-react";
+import { Plus, X, UserPlus, TrendingUp, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Enrollment {
   id: string;
@@ -189,9 +190,48 @@ const Enrollments = () => {
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Patient</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Program</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Enrolled</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Adherence</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Actions</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center gap-1 cursor-default">
+                            Adherence <Info className="w-3 h-3 opacity-50" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          Percentage of daily programme tasks completed by the patient.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center gap-1 cursor-default">
+                            Status <Info className="w-3 h-3 opacity-50" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <strong>active</strong> — currently enrolled · <strong>completed</strong> — finished programme · <strong>paused</strong> — temporarily stopped · <strong>dropped</strong> — withdrawn
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center gap-1 cursor-default">
+                            Actions <Info className="w-3 h-3 opacity-50" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          Update the enrolment status. Click the adherence percentage directly in that column to edit it manually.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </th>
                 </tr>
               </thead>
               <tbody>

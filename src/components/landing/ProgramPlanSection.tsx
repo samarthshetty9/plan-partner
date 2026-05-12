@@ -19,10 +19,11 @@ const timeline = [
     icon: Stethoscope,
     color: "from-blue-500 to-blue-600",
     title: "Doctor Leads",
-    subtitle: "Senior Specialist designs your program",
+    subtitle: "Plan built to your specification",
     points: [
-      '"Diabetes Program" by Dr. Sharma (20+ yrs Apollo)',
-      "Drag-drop timeline + Weekly video review",
+      "Doctor creates care plan: title, description, requirements form",
+      "Mediimate team builds plan to specification",
+      "Published under doctor's name after approval",
     ],
   },
   {
@@ -30,10 +31,11 @@ const timeline = [
     icon: Smartphone,
     color: "from-green-500 to-green-600",
     title: "Patient Starts",
-    subtitle: "WhatsApp onboarding — FREE Week 1",
+    subtitle: "WhatsApp onboarding — no app needed",
     points: [
-      "\"ನಮಸ್ಕಾರ ಅಭಯ್! Diabetes program LIVE\"",
-      "Family added | SPOC assigned | Points: 0/1000",
+      "WhatsApp onboarding — no app needed",
+      "Schedule personalised around patient's routine",
+      "Family or care partner added with consent | Points: 0 MHP",
     ],
   },
   {
@@ -41,11 +43,11 @@ const timeline = [
     icon: HeartPulse,
     color: "from-red-500 to-rose-600",
     title: "Daily Support",
-    subtitle: "Tech + Human, every single day",
+    subtitle: "Reminders and check-ins, every single day",
     points: [
-      '8AM: "Metformin now?" → +10pts 🟢 STREAK: 7',
-      'Voice: "BP ಓದಿ?" (Kannada AI) → +25pts',
-      'Diet: "Roti 2 | Dal 1 | Walk 30min" → +15pts',
+      "Morning glucose log → points awarded",
+      "Medication reminders, post-meal check, nutrition coaching",
+      "Evening check-in to close the day",
     ],
   },
   {
@@ -53,11 +55,11 @@ const timeline = [
     icon: TrendingUp,
     color: "from-amber-500 to-orange-500",
     title: "Weekly Boost",
-    subtitle: "Doctor Zoom + Community + Rewards",
+    subtitle: "Progress, leaderboard & milestone alerts",
     points: [
-      'Dr. Sharma Zoom (15min): "Abhay — Sugar ↓12%!"',
-      "Community WhatsApp: Feb Diabetes batch",
-      "Points → ₹100 PharmEasy | ₹200 Apollo lab",
+      "Weekly leaderboard position shared",
+      "Points balance updated daily",
+      "Tier milestone alert when threshold crossed",
     ],
   },
   {
@@ -65,11 +67,11 @@ const timeline = [
     icon: CalendarCheck,
     color: "from-purple-500 to-violet-600",
     title: "Monthly Check",
-    subtitle: "Lab tests + Personalized nutrition",
+    subtitle: "Summary, trends & clinic-ready report",
     points: [
-      "HbA1c lab ₹800 (50% off) → +100pts",
-      "Personalized diet by NIMHANS nutritionist",
-      '"Abhay 92% | Streak 28 🥇" — Family update',
+      "15-day summary: glucose trend, streaks, adherence rate",
+      "30-day report ready for clinic visit",
+      "Family or care partner updated on patient progress",
     ],
   },
   {
@@ -77,11 +79,11 @@ const timeline = [
     icon: ShieldAlert,
     color: "from-red-600 to-red-700",
     title: "Emergency Support",
-    subtitle: "24/7 SPOC + Doctor + ER linkage",
+    subtitle: "Instant alerts for critical readings",
     points: [
-      "SPOC Priya: 24/7 WhatsApp + Calls",
-      'BP>160 → "Dr Sharma slot Apollo NOW"',
-      '"Chest pain" → ER guidance + family alert',
+      "Critical readings → instant WhatsApp action buttons: call ambulance, call doctor, alert family",
+      "Elevated readings notify care partner automatically",
+      "Sustained trends flagged → doctor consultation suggested",
     ],
   },
   {
@@ -89,19 +91,19 @@ const timeline = [
     icon: GraduationCap,
     color: "from-emerald-500 to-teal-600",
     title: "Graduation",
-    subtitle: "90 days complete — real results",
+    subtitle: "Full summary and rewards redeemable",
     points: [
-      "Adherence 92% 🟢 | Sugar ↓14%",
-      "Points: 1875/2000 🥇 TOP 10%",
-      "Reward: ₹300 voucher + Certificate",
+      "Full programme summary delivered",
+      "Points redeemable — lab tests, plan discounts, teleconsultations",
+      "Report brought to clinic: complete 90-day clinical picture",
     ],
   },
 ];
 
 const rewardTiers = [
-  { tier: "Bronze", pts: "500pts", reward: "₹100 PharmEasy", color: "from-amber-700 to-amber-800" },
-  { tier: "Silver", pts: "1000pts", reward: "₹200 Apollo Lab", color: "from-gray-400 to-gray-500" },
-  { tier: "Gold", pts: "1500pts", reward: "₹300 Swiggy Health", color: "from-yellow-400 to-amber-500" },
+  { tier: "Bronze", pts: "200 MHP", reward: "Free lab test at partner clinic + 10% off next plan", color: "from-amber-700 to-amber-800" },
+  { tier: "Silver", pts: "500 MHP", reward: "Free HbA1c test + 1 free teleconsultation", color: "from-gray-400 to-gray-500" },
+  { tier: "Gold", pts: "1,000 MHP", reward: "90-day plan at 50% off + Priority access", color: "from-yellow-400 to-amber-500" },
 ];
 
 const ProgramPlanSection = () => (
@@ -118,6 +120,18 @@ const ProgramPlanSection = () => (
         </h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
           Doctor builds once. Tech + Humans deliver daily. Real results, real rewards.
+        </p>
+      </div>
+
+      {/* Care plan explainer */}
+      <div className="max-w-3xl mx-auto mb-12 rounded-2xl border border-primary/20 bg-primary/5 px-6 py-5 space-y-2">
+        <h3 className="text-base font-heading font-bold text-foreground">What is a care plan?</h3>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          A care plan is a structured, personalised programme — 30, 60, or 90 days — built by your doctor
+          and delivered daily on WhatsApp. Patients receive morning and evening check-ins, medication
+          reminders, glucose tracking, nutrition coaching, and weekly health reports. No app download.
+          No extra equipment. The doctor sets the clinical requirements once; Mediimate handles daily
+          delivery and reporting.
         </p>
       </div>
 
@@ -177,11 +191,17 @@ const ProgramPlanSection = () => (
               Points System
             </h4>
             <div className="space-y-2 text-sm text-muted-foreground">
-              <div className="flex justify-between"><span>Daily check-in</span><span className="font-semibold text-foreground">+10 pts</span></div>
-              <div className="flex justify-between"><span>Voice BP reading</span><span className="font-semibold text-foreground">+25 pts</span></div>
-              <div className="flex justify-between"><span>Lab result upload</span><span className="font-semibold text-foreground">+100 pts</span></div>
-              <div className="flex justify-between"><span>7-day streak bonus</span><span className="font-semibold text-foreground">+50 pts</span></div>
-              <div className="flex justify-between"><span>30-day streak bonus</span><span className="font-semibold text-foreground">+200 pts 🥇</span></div>
+              <div className="flex justify-between"><span>Log fasting blood glucose</span><span className="font-semibold text-foreground">+10 MHP</span></div>
+              <div className="flex justify-between"><span>Log post-meal blood glucose</span><span className="font-semibold text-foreground">+10 MHP</span></div>
+              <div className="flex justify-between"><span>Confirm medicine taken</span><span className="font-semibold text-foreground">+5 MHP / dose</span></div>
+              <div className="flex justify-between"><span>Log a meal</span><span className="font-semibold text-foreground">+5 MHP</span></div>
+              <div className="flex justify-between"><span>Log workout / activity</span><span className="font-semibold text-foreground">+10 MHP</span></div>
+              <div className="flex justify-between"><span>Complete complication screen</span><span className="font-semibold text-foreground">+20 MHP</span></div>
+              <div className="flex justify-between"><span>Book follow-up appointment</span><span className="font-semibold text-foreground">+50 MHP</span></div>
+              <div className="flex justify-between"><span>Refer a friend who joins</span><span className="font-semibold text-foreground">+100 MHP</span></div>
+              <div className="flex justify-between"><span>3-day logging streak bonus</span><span className="font-semibold text-foreground">+25 MHP</span></div>
+              <div className="flex justify-between"><span>7-day logging streak bonus</span><span className="font-semibold text-foreground">+75 MHP</span></div>
+              <div className="flex justify-between"><span>Complete all 30 days</span><span className="font-semibold text-foreground">+200 MHP 🥇</span></div>
             </div>
           </div>
 
@@ -193,9 +213,10 @@ const ProgramPlanSection = () => (
             </h4>
             <div className="rounded-xl bg-muted/50 p-4 font-mono text-sm space-y-1.5">
               <p className="text-foreground font-semibold">Abhay: 92% 🟢 | Streak 21 | Silver</p>
-              <p className="text-muted-foreground text-xs">Spouse sees: Adherence + miss alerts</p>
-              <p className="text-muted-foreground text-xs">Kids see: "Dad 85% this week 🟡"</p>
-              <p className="text-muted-foreground text-xs">Emergency: All family numbers alerted</p>
+              <p className="text-muted-foreground text-xs">Family sees: adherence rate, streaks & weekly summary</p>
+              <p className="text-muted-foreground text-xs">Missed logs → care partner nudged on WhatsApp</p>
+              <p className="text-muted-foreground text-xs">Critical readings → instant family alert</p>
+              <p className="text-muted-foreground text-xs">Points balance & tier progress shared</p>
             </div>
             <p className="text-xs text-muted-foreground italic">Visible to family — Indian accountability that works.</p>
           </div>
@@ -226,9 +247,8 @@ const ProgramPlanSection = () => (
             {[
               "Daily dopamine (points + streaks)",
               "Family accountability (Indian reality)",
-              "SPOC backup (human when AI fails)",
-              "Weekly doctor Zoom (motivation)",
-              "Rewards that actually matter (₹300 real)",
+              "SPOC backup (human, always available)",
+              "Rewards that actually matter",
               "WhatsApp forever (no app fatigue)",
             ].map((item) => (
               <div key={item} className="flex items-center gap-2 text-sm text-foreground">
