@@ -484,19 +484,16 @@ const PatientCaseSubmit = () => {
                   }
                   className="font-mono tracking-widest"
                 />
-                {vaultLoading && (
+                {vaultLoading ? (
                   <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full shrink-0" />
-                )}
+                ) : vaultCode ? (
+                  <span className="text-xs font-medium text-emerald-600 shrink-0">Auto-filled ✓</span>
+                ) : null}
               </div>
               <p className="text-xs text-muted-foreground">
-                Find your code in{" "}
-                <a
-                  href="/patient/vault"
-                  className="text-primary hover:underline"
-                >
-                  Health Vault
-                </a>
-                . This allows us to share your records with hospitals securely.
+                {vaultCode
+                  ? "Your vault code has been pre-filled automatically. You can edit it if needed."
+                  : <>Code not found. You can enter it manually, or find it in{" "}<a href="/patient/vault" className="text-primary hover:underline">Health Vault</a>.</>}
               </p>
             </div>
 

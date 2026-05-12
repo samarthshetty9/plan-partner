@@ -23,6 +23,9 @@ const ALLOWED_ORIGINS: (string | RegExp)[] = [
   "https://plan-partner.netlify.app",
   "https://mediimate.in",
   "https://www.mediimate.in",
+  "https://mediimate.com",
+  "https://www.mediimate.com",
+  "https://mediimate.connectifytechnologies.com",
 ];
 if (!isProduction) {
   ALLOWED_ORIGINS.push("http://localhost:5173", "http://localhost:4173", "http://127.0.0.1:5173");

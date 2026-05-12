@@ -1,7 +1,9 @@
+import { useState, useMemo } from "react";
 import { MARKETPLACE_PLANS } from "@/data/marketplace-plans";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   HeartPulse, 
   Sparkles, 
@@ -12,12 +14,73 @@ import {
   Star,
   ShieldCheck,
   TrendingUp,
-  Clock
+  Clock,
+  Search,
+  X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+const DURATION_FILTERS = [
+  { label: "All durations", value: "all" },
+  { label: "Up to 30 days", value: "30" },
+  { label: "31–60 days", value: "60" },
+  { label: "61–90 days", value: "90" },
+  { label: "90+ days", value: "90+" },
+];
+
 export default function PatientCarePlanChannel() {
-  const categories = Array.from(new Set(MARKETPLACE_PLANS.map(p => p.category)));
+  const allCategories = useMemo(
+    () => Array.from(new Set(MARKETPLACE_PLANS.map(p => p.category))),
+    []
+  );
+  const allCoaches = useMemo(
+    () => Array.from(new Set(MARKETPLACE_PLANS.map(p => p.coach))),
+    []
+  );
+
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedDuration, setSelectedDuration] = useState("all");
+  const [selectedCoach, setSelectedCoach] = useState("all");
+
+  const filtered = useMemo(() => {
+    return MARKETPLACE_PLANS.filter(p => {
+      const q = search.toLowerCase();
+      const matchSearch =
+        !q ||
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        p.coach.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q);
+      const matchCategory = selectedCategory === "all" || p.category === selectedCategory;
+      const matchCoach = selectedCoach === "all" || p.coach === selectedCoach;
+      const matchDuration =
+        selectedDuration === "all" ||
+        (selectedDuration === "30" && p.duration_days <= 30) ||
+        (selectedDuration === "60" && p.duration_days > 30 && p.duration_days <= 60) ||
+        (selectedDuration === "90" && p.duration_days > 60 && p.duration_days <= 90) ||
+        (selectedDuration === "90+" && p.duration_days > 90);
+      return matchSearch && matchCategory && matchCoach && matchDuration;
+    });
+  }, [search, selectedCategory, selectedDuration, selectedCoach]);
+
+  const groupedByCategory = useMemo(() => {
+    const map = new Map<string, typeof MARKETPLACE_PLANS>();
+    filtered.forEach(p => {
+      if (!map.has(p.category)) map.set(p.category, []);
+      map.get(p.category)!.push(p);
+    });
+    return map;
+  }, [filtered]);
+
+  const hasFilters = search || selectedCategory !== "all" || selectedDuration !== "all" || selectedCoach !== "all";
+
+  const clearFilters = () => {
+    setSearch("");
+    setSelectedCategory("all");
+    setSelectedDuration("all");
+    setSelectedCoach("all");
+  };
 
   return (
     <div className="space-y-10 pb-20">
@@ -48,9 +111,108 @@ export default function PatientCarePlanChannel() {
         </div>
       </section>
 
+      {/* Search & Filters */}
+      <div className="space-y-4 sticky top-0 z-20 bg-background/95 backdrop-blur-sm pt-2 pb-4 -mx-1 px-1">
+        {/* Search bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Search plans, categories, or doctors…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 pr-9"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Filter chips */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Category filter */}
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setSelectedCategory("all")}
+              className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                selectedCategory === "all"
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-background text-slate-600 border-slate-200 hover:border-slate-400"
+              }`}
+            >
+              All categories
+            </button>
+            {allCategories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(selectedCategory === cat ? "all" : cat)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                  selectedCategory === cat
+                    ? "bg-emerald-600 text-white border-emerald-600"
+                    : "bg-background text-slate-600 border-slate-200 hover:border-emerald-300"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Duration filter */}
+          <select
+            value={selectedDuration}
+            onChange={e => setSelectedDuration(e.target.value)}
+            className="px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 bg-background text-slate-600 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            {DURATION_FILTERS.map(f => (
+              <option key={f.value} value={f.value}>{f.label}</option>
+            ))}
+          </select>
+
+          {/* Doctor filter */}
+          <select
+            value={selectedCoach}
+            onChange={e => setSelectedCoach(e.target.value)}
+            className="px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 bg-background text-slate-600 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="all">All doctors</option>
+            {allCoaches.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <X className="w-3 h-3" /> Clear filters
+            </button>
+          )}
+        </div>
+
+        {/* Results count */}
+        {hasFilters && (
+          <p className="text-xs text-muted-foreground">
+            {filtered.length} plan{filtered.length !== 1 ? "s" : ""} found
+          </p>
+        )}
+      </div>
+
+      {/* No results */}
+      {filtered.length === 0 && (
+        <div className="text-center py-16 space-y-3">
+          <Search className="w-10 h-10 mx-auto text-muted-foreground opacity-40" />
+          <p className="text-muted-foreground font-medium">No plans match your search.</p>
+          <button onClick={clearFilters} className="text-sm text-primary hover:underline">Clear filters</button>
+        </div>
+      )}
+
       {/* Categories & Plans */}
-      {categories.map((category) => {
-        const plans = MARKETPLACE_PLANS.filter(p => p.category === category);
+      {Array.from(groupedByCategory.entries()).map(([category, plans]) => {
         const coach = plans[0]?.coach;
         const coachRole = plans[0]?.coachRole;
 
@@ -68,9 +230,6 @@ export default function PatientCarePlanChannel() {
                   </p>
                 </div>
               </div>
-              <Button variant="ghost" className="text-emerald-600 font-bold hover:text-emerald-700 hover:bg-emerald-50 gap-2">
-                View All <ChevronRight className="w-4 h-4" />
-              </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -84,7 +243,9 @@ export default function PatientCarePlanChannel() {
                     <div className="absolute top-4 right-4 z-20">
                       <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-slate-100 flex items-center gap-1.5">
                         <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
-                        <span className="text-[10px] font-black text-slate-700">PREMIUM</span>
+                        <span className="text-[10px] font-black text-slate-700">
+                          {plan.price ?? "PREMIUM"}
+                        </span>
                       </div>
                     </div>
                     
@@ -146,31 +307,33 @@ export default function PatientCarePlanChannel() {
       })}
 
       {/* Why Mediimate Channel */}
-      <section className="bg-emerald-50 rounded-3xl p-8 md:p-12 border border-emerald-100 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-          <div className="space-y-3">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm ring-1 ring-emerald-200">
-              <ShieldCheck className="w-6 h-6 text-emerald-600" />
+      {filtered.length > 0 && (
+        <section className="bg-emerald-50 rounded-3xl p-8 md:p-12 border border-emerald-100 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            <div className="space-y-3">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm ring-1 ring-emerald-200">
+                <ShieldCheck className="w-6 h-6 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-black text-slate-800">Verified Protocols</h3>
+              <p className="text-sm text-slate-600 font-medium">All plans are clinical-grade and reviewed by senior doctors.</p>
             </div>
-            <h3 className="text-lg font-black text-slate-800">Verified Protocols</h3>
-            <p className="text-sm text-slate-600 font-medium">All plans are clinical-grade and reviewed by senior doctors.</p>
-          </div>
-          <div className="space-y-3">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm ring-1 ring-emerald-200">
-              <TrendingUp className="w-6 h-6 text-emerald-600" />
+            <div className="space-y-3">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm ring-1 ring-emerald-200">
+                <TrendingUp className="w-6 h-6 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-black text-slate-800">Dynamic Progress</h3>
+              <p className="text-sm text-slate-600 font-medium">Auto-adjusting tasks based on your logs and physical performance.</p>
             </div>
-            <h3 className="text-lg font-black text-slate-800">Dynamic Progress</h3>
-            <p className="text-sm text-slate-600 font-medium">Auto-adjusting tasks based on your logs and physical performance.</p>
-          </div>
-          <div className="space-y-3">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm ring-1 ring-emerald-200">
-              <Sparkles className="w-6 h-6 text-emerald-600" />
+            <div className="space-y-3">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm ring-1 ring-emerald-200">
+                <Sparkles className="w-6 h-6 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-black text-slate-800">Earn Rewards</h3>
+              <p className="text-sm text-slate-600 font-medium">The more consistent you are, the more Mediimate Health Points you earn.</p>
             </div>
-            <h3 className="text-lg font-black text-slate-800">Earn Rewards</h3>
-            <p className="text-sm text-slate-600 font-medium">The more consistent you are, the more Mediimate Health Points you earn.</p>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

@@ -1,0 +1,327 @@
+MEDIIMATE
+
+MHP Rewards System
+Cost Analysis and Vendor Overview
+Internal Report | Prepared by Krish Rawri | Mediimate, Bangalore
+
+1. How Patients Earn Points
+The MHP system is built around daily health behaviours. Points are awarded for consistent logging, streaks,
+and completed milestones. The breakdown below reflects what a fully adherent patient would earn over a
+30-day cycle.
+Action
+
+Points
+
+Frequency
+
+Log fasting blood glucose reading
+
++10 MHP
+
+Daily
+
+Log post-meal blood glucose reading (2h)
+
++10 MHP
+
+Daily
+
+Confirm prescribed medication taken
+
++5 MHP
+
+Per dose
+
+Log daily meal
+
++5 MHP
+
+Per meal
+
+Log physical activity or walk
+
++10 MHP
+
+Daily
+
+Examinations and tests
+
++10 MHP
+
+Up to 5 per month
+
+Book follow-up appointment via WhatsApp
+
++50 MHP
+
+Per booking
+
+Refer a friend who enrols
+
++100 MHP
+
+Per referral
+
+3-day consecutive logging streak bonus
+
++25 MHP
+
+Per streak
+
+7-day consecutive logging streak bonus
+
++75 MHP
+
+Per streak
+
+Complete all 30 days of the programme
+
++200 MHP
+
+One-time per cycle
+
+Examinations and tests are capped at 5 per month as a rough estimate. The actual number depends on the
+care plan requirements set by the physician. Appointment bookings are also not limited to one per month
+though one is the assumed baseline for this estimate.
+
+2. Maximum Earnable Points Per Month
+Based on a fully adherent patient over 30 days, assuming 3 meals per day, 2 medication doses per day, 5
+examinations or tests in the month, and 1 appointment booking, the estimated maximum is as follows.
+Category
+
+Calculation
+
+Total
+
+Fasting glucose log
+
+10 pts x 30 days
+
+300 MHP
+
+Post-meal glucose log
+
+10 pts x 30 days
+
+300 MHP
+
+Meal logs
+
+5 pts x 3 meals x 30 days
+
+450 MHP
+
+Medication confirmations
+
+5 pts x 2 doses x 30 days
+
+300 MHP
+
+Physical activity
+
+10 pts x 30 days
+
+300 MHP
+
+Examinations and tests
+
+10 pts x 5
+
+50 MHP
+
+7-day streak bonus
+
+75 pts x 4 streaks
+
+300 MHP
+
+3-day streak bonus (additional)
+
+25 pts x 4
+
+100 MHP
+
+Appointment booking
+
+50 pts x 1
+
+50 MHP
+
+Programme completion bonus
+
+One-time
+
+200 MHP
+
+Total
+
+2,350 MHP
+
+2. Reward Tiers
+Based on the earning potential above, two active reward tiers are being proposed for the pilot phase. A third
+tier exists in the system but is being held back for reasons explained below.
+Tier
+
+Points Required
+
+Reward
+
+Approx. Time to Reach
+
+Bronze
+
+1,200 MHP
+
+HbA1c test at 50% off
+
+Around Day 15 at full
+adherence
+
+Silver
+
+3,000 MHP
+
+Free HbA1c test + one discounted
+teleconsultation
+
+Just beyond one full 30-day
+cycle
+
+Gold
+
+5,000 MHP
+
+50% off next care plan purchase
+
+Roughly two full cycles
+
+Why Gold is Not Being Activated for the Pilot
+The Gold tier reward is set at 5,000 MHP, which requires approximately two complete 30-day cycles of strong
+adherence to reach. At the pilot stage, with 15 patients and a single clinic, there are two reasons this tier is not
+being prioritised right now.
+First, patients physically cannot accumulate enough points in one month to reach Gold. It is a two-cycle
+milestone by design, which means it is not relevant to a 30-day pilot.
+Second, the reward attached to Gold is a 50% discount on a future care plan purchase. At a care plan price of
+Rs. 499, a 50% discount means we collect Rs. 249.50 per Gold redemption instead of Rs. 499. With 15
+patients this does not represent a direct cash outflow but it does reduce what is already a small initial revenue
+base. At this stage it makes more sense to hold Gold as a welcome-back incentive that the company can
+activate once the programme has proven its value and patient volumes are large enough to absorb the
+discount without it affecting overall margins.
+The Gold tier will remain in the system and visible to patients as a future goal. It just will not be redeemable
+during the pilot.
+
+3. Estimated Cost of Rewards
+The following estimates are based on 15 patients in the pilot, assuming a realistic redemption rate rather than
+assuming every patient reaches every tier.
+Scenario
+
+Patients
+Redeeming
+
+Cost Per Redemption
+
+Total Estimated
+Cost
+
+Bronze: HbA1c at 50% off
+
+10 of 15 (est.)
+
+Rs. 75 to 100 (Mediimate
+covers half)
+
+Rs. 750 to 1,000
+
+Silver: Free HbA1c +
+teleconsultation
+
+4 of 15 (est.)
+
+Rs. 150 to 400 depending on
+clinic deal
+
+Rs. 600 to 1,600
+
+Gold: 50% off care plan (not
+active)
+
+Not applicable
+
+Rs. 249.50 revenue loss per
+redemption
+
+Not applicable
+
+Rs. 1,350 to 2,600
+
+Total estimated pilot reward
+cost
+
+These figures assume Mediimate absorbs the Bronze discount directly. The Silver teleconsultation cost can
+be reduced to zero if the pilot clinic agrees to offer one free follow-up as part of the partnership arrangement,
+which is a reasonable ask given we are generating the patient engagement for them.
+
+4. Vendor Options in Bangalore
+For the HbA1c test reward specifically, the following vendors are worth approaching for a pilot-stage
+partnership or bulk discount agreement.
+Vendor
+
+Normal HbA1c
+Rate
+
+Estimated B2B Rate
+
+Notes
+
+Thyrocare
+
+Rs. 300 to 400
+
+Rs. 150 to 200
+
+National chain, open to B2B
+agreements, straightforward to
+approach
+
+Redcliffe Labs
+
+Rs. 350 to 450
+
+Rs. 150 to 200
+
+Newer chain, aggressive on
+partnerships, good for pilot-stage
+deals
+
+Manipal Diagnostics
+
+Rs. 400 to 500
+
+Rs. 100 to 150 or
+potentially at cost
+
+Given the Manipal Incubation
+connection this is the easiest door to
+open and likely the best rate
+
+Pilot Clinic (in-house)
+
+Varies
+
+Negotiable as part of
+partnership
+
+If the clinic has in-house diagnostics,
+bundling the reward here simplifies
+the whole arrangement
+
+For the teleconsultation reward, the pilot clinic is the obvious first partner. A discounted or complimentary
+follow-up visit costs them very little since the patient was already engaged through the programme. This can
+be structured as a direct partnership benefit rather than a cash arrangement, meaning the clinic provides the
+reward and Mediimate provides the patient.
+Practo is also a Bangalore-based platform with a B2B partnerships team if a digital teleconsultation option is
+preferred over an in-clinic visit.
+
+MEDIIMATE · JIVAYOI WELLNESS AND LIVING PVT. LTD. · www.mediimate.com · Internal Use Only
+
+

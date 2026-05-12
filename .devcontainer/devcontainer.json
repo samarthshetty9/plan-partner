@@ -1,0 +1,7 @@
+{
+  "portsAttributes": {
+    "8080": {
+      "visibility": "public"
+    }
+  }
+}

@@ -1,0 +1,143 @@
+MEDIIMATE
+
+Diabetic Care Plan Requirements Form
+(Under Development)
+Completed by the treating physician at time of care plan creation. Used internally by the Mediimate team
+to build the programme.
+
+A — PLAN OVERVIEW
+Care Plan Title
+Plan Duration
+​ 30 Days
+​ 60 Days
+​ 90 Days
+Intended Patient Profile (e.g. newly diagnosed Type 2, insulin-dependent, post-complication management):
+
+Diabetes Type this Plan Covers:
+​
+​
+​
+​
+
+Type 1
+Type 2
+Pre-diabetic
+All
+
+B — MONITORING REQUIREMENTS
+Blood Glucose Monitoring
+​ Fasting (morning, before food)
+​ Post-meal — Breakfast
+​ Post-meal — Lunch
+​ Post-meal — Dinner
+​ Both fasting and post-meal
+Additional Vitals
+​ Blood Pressure
+​ Weight
+​ Other:
+Target Ranges
+Fasting Glucose Target (mg/dL): ________ to ________
+Post-meal Glucose Target (mg/dL): ________ to ________
+HbA1c Target (%): ________
+
+C — LAB TESTS & SCREENINGS (SPECIAL DAYS)
+Special days are scheduled events that require the patient to take action beyond their daily routine — a lab
+test, a clinical screening, or a doctor's appointment. They are set by the physician's requirements and the
+patient is given flexibility to choose the date and provider.
+
+Test / Screening
+
+Include
+
+HbA1c Blood Test
+
+​ Yes
+​ No
+
+Kidney Function Panel (Creatinine + Urine
+Microalbumin)
+
+​ Yes
+​ No
+
+Lipid Profile
+
+​ Yes
+​ No
+
+Diabetic Retinopathy Screening
+
+​ Yes
+​ No
+
+Peripheral Neuropathy Assessment
+
+​ Yes
+​ No
+
+Cardiovascular Risk Check
+
+​ Yes
+​ No
+
+Foot Examination
+
+​ Yes
+​ No
+
+Follow-up Appointment with Physician
+
+​ Yes
+​ No
+
+Other: ______________________________
+
+​ Yes
+​ No
+
+Preferred Timing
+
+Pre-Appointment Investigations
+Should Mediimate recommend relevant lab work ahead of the follow-up appointment?
+
+​ Yes — standard (HbA1c, kidney panel, lipid profile as applicable)
+​ Yes — specify:
+​ No
+
+D — NUTRITIONAL GUIDELINES
+Mediimate coaches patients conversationally, not clinically. Specify priorities you want the coaching to follow.
+
+General Approach
+​ Standard diabetic diet coaching
+​ Doctor-specified guidelines below
+Priorities to Emphasise (e.g. reduce white rice, increase fibre, portion control):
+
+Restrictions to Enforce (e.g. no refined carbs, avoid specific foods):
+
+Caloric or Meal-size Targets (if any):
+
+E — ACTIVITY GUIDELINES
+General Approach
+​ Standard recommendations
+​ Doctor-specified below
+Activity Type and Frequency Recommended for this Patient Profile:
+
+Restrictions (e.g. avoid high-impact, no exercise if glucose below X):
+
+F — ADDITIONAL NOTES
+Complication Focus Areas for this Plan (if any):
+
+Specific Patient Considerations the Mediimate Team Should Account For:
+
+Submitted by
+
+Date
+
+Dr. Name / Signature
+
+DD / MM / YYYY
+
+MEDIIMATE · JIVAYOI WELLNESS AND LIVING PVT. LTD. · www.mediimate.com · DPDP Act 2023 Compliant · For Internal Use
+Only
+
+

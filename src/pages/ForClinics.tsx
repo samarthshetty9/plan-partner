@@ -5,7 +5,6 @@ import {
   X,
   MessageSquare,
   Activity,
-  Phone,
   BarChart3,
   Shield,
   Calendar,
@@ -86,10 +85,10 @@ const HeroSection = ({ onContact }: { onContact: (type: ContactType) => void }) 
         For Clinics & Practices
       </span>
       <h1 className="text-4xl sm:text-5xl lg:text-6xl font-heading font-extrabold leading-tight text-foreground">
-        AI agents that grow your <span className="text-gradient">clinic revenue</span>
+        Automation that <span className="text-gradient">grows your clinic revenue</span>
       </h1>
       <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-        No manual follow-ups. No missed reminders. No revenue leaks. Our AI agents handle patient engagement,
+        No manual follow-ups. No missed reminders. No revenue leaks. Our platform handles patient engagement,
         care programs, and scheduling on WhatsApp — turning every patient into recurring revenue.
       </p>
       <div className="flex flex-wrap justify-center gap-3 pt-2">
@@ -130,12 +129,11 @@ const StatsBar = () => (
 );
 
 const features = [
-  { icon: MessageSquare, title: "AI WhatsApp Agent", description: "Handles reminders, 2-way messaging, and booking — no staff effort. Patients reply on WhatsApp, AI handles the rest.", tag: "Core" },
-  { icon: Activity, title: "Autonomous Care Programs", description: "AI agents run NCD management, post-discharge care, elder-care workflows end-to-end. 90-day programs with gamification.", tag: "Revenue" },
-  { icon: Phone, title: "AI Voice Check-ins", description: "Voice calls in 10+ Indian languages for medication compliance, symptom assessment, and auto-escalation to doctors.", tag: "Multilingual" },
+  { icon: MessageSquare, title: "WhatsApp Automation", description: "Handles reminders, 2-way messaging, and booking — no staff effort. Patients reply on WhatsApp, the system handles the rest.", tag: "Core" },
+  { icon: Activity, title: "Autonomous Care Programs", description: "Runs NCD management, post-discharge care, and elder-care workflows end-to-end. 90-day programmes with gamification.", tag: "Revenue" },
   { icon: BarChart3, title: "Revenue Analytics", description: "Patient adherence rates, at-risk flags, revenue per program, compliance reports — all automated, real-time.", tag: "Insights" },
-  { icon: Shield, title: "Patient Health Vault", description: "Centralized records — appointments, labs, medications, vitals. Secure sharing with vault codes. AI-organized.", tag: "Secure" },
-  { icon: Calendar, title: "Smart Scheduling", description: "AI handles appointment reminders, confirmations, rescheduling, and no-show follow-ups via WhatsApp — automatically.", tag: "Automated" },
+  { icon: Shield, title: "Patient Health Vault", description: "Centralized records — appointments, labs, medications, vitals. Secure sharing with vault codes. Auto-organized.", tag: "Secure" },
+  { icon: Calendar, title: "Smart Scheduling", description: "Automatically handles appointment reminders, confirmations, rescheduling, and no-show follow-ups via WhatsApp.", tag: "Automated" },
 ];
 
 const FeaturesSection = () => (
@@ -146,7 +144,7 @@ const FeaturesSection = () => (
           Everything you need to grow revenue
         </h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          AI-powered tools that reduce manual work to zero and maximize patient lifetime value.
+          Tools that reduce manual work to zero and maximise patient lifetime value.
         </p>
       </div>
       <div className="max-w-6xl mx-auto grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -179,8 +177,8 @@ const WhoItsForSection = () => (
       <h2 className="text-2xl sm:text-3xl font-heading font-bold text-foreground text-center mb-10">Built for every clinic size</h2>
       <div className="grid sm:grid-cols-3 gap-6">
         {whoItsFor.map((w) => (
-          <div key={w.title} className="rounded-2xl border border-border bg-background p-6 text-center hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <div key={w.title} className="rounded-2xl border border-border bg-background p-6 hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
               <w.icon className="w-6 h-6 text-primary" />
             </div>
             <h4 className="font-heading font-bold text-foreground mb-3">{w.title}</h4>

@@ -26,7 +26,7 @@ const NAV_LINKS = [
   { href: "/for-clinics", label: "For Clinics", isRoute: true },
   { href: "/for-hospitals", label: "For Hospitals", isRoute: true },
   { href: "#how-it-works", label: "How It Works", isRoute: false },
-  { href: "#backed-by", label: "About", isRoute: false },
+  { href: "/contact", label: "About", isRoute: true },
   { href: "#pricing", label: "Pricing", isRoute: false },
 ];
 
@@ -107,7 +107,7 @@ const HeroSection = ({ onContact }: { onContact: (type: ContactType) => void }) 
           The <span className="text-gradient">revenue engine</span> for healthcare
         </h1>
         <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-          Mediimate helps clinics and hospitals grow revenue through AI-powered patient engagement,
+          Mediimate helps clinics and hospitals grow revenue through automated patient engagement,
           automated care programs, and medical tourism patient acquisition.
         </p>
 
@@ -118,7 +118,7 @@ const HeroSection = ({ onContact }: { onContact: (type: ContactType) => void }) 
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-foreground">For Clinics</p>
-              <p className="text-xs text-muted-foreground">AI engagement & revenue</p>
+              <p className="text-xs text-muted-foreground">Automated engagement & revenue</p>
             </div>
             <ArrowRight className="w-4 h-4 text-primary shrink-0 group-hover:translate-x-0.5 transition-transform" />
           </Link>
@@ -189,18 +189,18 @@ const TwoPathsSection = () => (
             </div>
             <div>
               <h3 className="text-xl font-heading font-extrabold text-foreground">For Clinics</h3>
-              <p className="text-xs text-primary font-semibold">AI-Powered Patient Engagement</p>
+              <p className="text-xs text-primary font-semibold">Automated Patient Engagement</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-            Turn every patient visit into recurring revenue. AI agents on WhatsApp handle follow-ups,
+            Turn every patient visit into recurring revenue. WhatsApp automation handles follow-ups,
             care programs, and reminders — reducing no-shows by 65% and increasing adherence to 92%.
           </p>
           <ul className="space-y-2 mb-6">
             {[
-              "WhatsApp AI agents — zero manual work",
+              "WhatsApp automation — zero manual work",
               "90-day care programs with gamification",
-              "Automated reminders & voice check-ins",
+              "Automated reminders & follow-ups",
               "Patient health vault & document management",
               "Revenue analytics & compliance reports",
             ].map((item) => (
@@ -450,7 +450,7 @@ const Footer = () => (
         <div>
           <p className="text-sm font-semibold text-foreground mb-3">Company</p>
           <div className="space-y-2 text-sm text-muted-foreground">
-            <a href="#backed-by" className="block hover:text-foreground transition-colors">About</a>
+            <Link to="/contact" className="block hover:text-foreground transition-colors">About</Link>
             <Link to="/contact" className="block hover:text-foreground transition-colors">Contact</Link>
             <Link to="/privacy" className="block hover:text-foreground transition-colors">Privacy</Link>
             <Link to="/terms" className="block hover:text-foreground transition-colors">Terms</Link>
