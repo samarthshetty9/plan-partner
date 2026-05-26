@@ -2,9 +2,9 @@ import { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { usePatientRecord } from "@/hooks/usePatientRecord";
-import { api } from "@/lib/api";
+import { api, API_BASE, getStoredToken } from "@/lib/api";
 import { format } from "date-fns";
-import { FileText, Plus, X, Upload, ArrowLeft, Sparkles, BookOpen } from "lucide-react";
+import { FileText, Plus, X, Upload, ArrowLeft, Sparkles, BookOpen, Download } from "lucide-react";
 import {
   BarChart, Bar, LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell, Legend,
 } from "recharts";
@@ -41,7 +41,7 @@ interface LabResultRow {
   tested_at: string;
 }
 
-const PatientLabResults = () => {
+const PatientLabResults = ({ isEmbedded }: { isEmbedded?: boolean }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { patientId, loading: patientLoading } = usePatientRecord();
@@ -115,6 +115,24 @@ const PatientLabResults = () => {
     }
   };
 
+  const downloadReport = async (reportId: string, fileName: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/lab_reports/${reportId}/file`, {
+        headers: { Authorization: `Bearer ${getStoredToken()}`, "X-Authorization": `Bearer ${getStoredToken()}` },
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Download failed", variant: "destructive" });
+    }
+  };
+
   const handleAdd = async () => {
     if (!patientId || !testName.trim() || !resultValue.trim()) return;
     setSaving(true);
@@ -165,6 +183,9 @@ const PatientLabResults = () => {
               <h2 className="text-lg font-heading font-bold text-foreground">{report.file_name || "Lab Report"}</h2>
               <p className="text-sm text-muted-foreground">{format(new Date(report.tested_at), "MMM d, yyyy")}</p>
             </div>
+            <button onClick={() => downloadReport(report.id, report.file_name || "lab_report")} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-muted/50 text-sm font-medium">
+              <Download className="w-4 h-4" /> Download Original
+            </button>
           </div>
 
           {/* Extracted values table */}
@@ -302,19 +323,28 @@ const PatientLabResults = () => {
 
   return (
     <div className="w-full max-w-full min-w-0 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-heading font-bold text-foreground truncate">Lab Results</h1>
-          <p className="text-muted-foreground text-sm">Upload a report or add results manually</p>
-        </div>
-        {patientId && (
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
-              <Plus className="w-4 h-4" /> Add Lab Result
-            </button>
+      {!isEmbedded && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-heading font-bold text-foreground truncate">Lab Results</h1>
+            <p className="text-muted-foreground text-sm">Upload a report or add results manually</p>
           </div>
-        )}
-      </div>
+          {patientId && (
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
+                <Plus className="w-4 h-4" /> Add Lab Result
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {isEmbedded && patientId && (
+        <div className="flex justify-end">
+          <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
+            <Plus className="w-4 h-4" /> Add Lab Result
+          </button>
+        </div>
+      )}
 
       {/* Upload lab report */}
       {patientId && (

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { api, getStoredToken } from "@/lib/api";
 import { usePushSubscribe } from "@/hooks/usePushSubscribe";
-import { Send, Heart, Shield, Menu, Plus, Activity, Droplets, UtensilsCrossed, Pill, Bell, ImagePlus, ChevronLeft, Trophy, Mic, MicOff, Volume2, Gift, X, Target, Award, Flame, Star } from "lucide-react";
+import { Send, Heart, Shield, Menu, Plus, Activity, Droplets, UtensilsCrossed, Pill, Bell, ImagePlus, ChevronLeft, Trophy, Mic, MicOff, Volume2, Gift, X, Target, Award, Flame, Star, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import { QuickLogCards, getGreeting, BP_PRESETS, SUGAR_PRESETS, MEAL_OPTIONS, type QuickLogLast } from "@/components/QuickLogSection";
@@ -597,79 +597,73 @@ const PatientChat = ({ onOpenMenu }: { onOpenMenu: () => void }) => {
       {/* Chat Area - full height: scrollable content + fixed bottom input (ChatGPT-style) */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {!hasMessages ? (
-          /* Empty state: scrollable content (greeting, quick log, health score, today's progress) + fixed chat at bottom */
-          <>
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 sm:py-6 pwa-scroll min-h-0 pb-4">
-              <div className="w-full max-w-2xl mx-auto space-y-6">
-                {/* Greeting */}
-                <div className="text-center">
-                  <h1 className="text-2xl sm:text-3xl font-heading font-semibold text-foreground tracking-tight">
-                    {getGreeting()}{patientName?.split(" ")[0] ? `, ${patientName.split(" ")[0]}` : ""}
-                  </h1>
-                  <p className="text-sm text-muted-foreground mt-1">Log today&apos;s health and chat with your care team</p>
-                </div>
+          /* Empty state: single scrollable container for the entire page */
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 sm:py-6 pwa-scroll min-h-0">
+            <div className="w-full max-w-2xl mx-auto space-y-6 pb-12">
+              {/* Greeting */}
+              <div className="text-center mb-2">
+                <h1 className="text-2xl sm:text-3xl font-heading font-semibold text-foreground tracking-tight">
+                  {getGreeting()}{patientName?.split(" ")[0] ? ` ${patientName.split(" ")[0]}` : ""}
+                </h1>
+              </div>
 
-                {/* Quick log: BP, Sugar, Food, Medication */}
-                <div className="rounded-2xl bg-card border border-border/60 shadow-sm p-4 sm:p-5">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 text-center">Quick log</p>
-                  <QuickLogCards
-                    patientName={patientName}
-                    onLogBP={() => { setQuickBpShowPresets(false); setShowQuickBp(true); }}
-                    onLogSugar={() => { setQuickSugarShowPresets(false); setShowQuickSugar(true); }}
-                    onLogFood={() => setShowQuickFood(true)}
-                    onLogMedication={() => setShowQuickMed(true)}
-                    compact
-                  />
-                </div>
-
-                {/* Today's progress - one line only (no health score card on dashboard) */}
-                <TodayProgress data={rewards} compact />
-
-                {/* Optional banners */}
-                {(isUsualBp || isUsualSugar) && (
-                  <div className="rounded-xl bg-primary/10 border border-primary/20 px-4 py-3">
-                    <p className="text-sm font-medium text-foreground">
-                      {isUsualBp && usualBpLocal && <>It&apos;s your usual BP time ({usualBpLocal}).</>}
-                      {isUsualBp && isUsualSugar && " "}
-                      {isUsualSugar && "Usual blood sugar logging time."}
-                    </p>
-                    <div className="flex gap-2 mt-2">
-                      {isUsualBp && (
-                        <button type="button" onClick={() => { setQuickBpShowPresets(false); setShowQuickBp(true); }} className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium touch-manipulation">
-                          Log BP
-                        </button>
-                      )}
-                      {isUsualSugar && (
-                        <button type="button" onClick={() => { setQuickSugarShowPresets(false); setShowQuickSugar(true); }} className="px-3 py-1.5 rounded-lg bg-accent text-accent-foreground text-sm font-medium touch-manipulation">
-                          Log Sugar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {!subscribed && (
-                  <div className="flex justify-center">
+              {/* Quick log section header & capsule */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                  <h2 className="text-sm font-heading font-semibold text-muted-foreground uppercase tracking-wider">Quick Logs</h2>
+                  {!subscribed && (
                     <button
                       type="button"
                       onClick={() => subscribe()}
                       disabled={pushLoading}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl border border-border bg-card text-sm text-muted-foreground hover:bg-muted hover:text-foreground touch-manipulation"
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all touch-manipulation"
                     >
-                      <Bell className="w-4 h-4 flex-shrink-0" />
-                      {pushLoading ? "Enabling..." : "Enable reminders"}
+                      <Bell className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>{pushLoading ? "Enabling..." : "Enable notifications"}</span>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
+                
+                {/* 2x2 Grid cards */}
+                <QuickLogCards
+                  patientName={patientName}
+                  onLogBP={() => { setQuickBpShowPresets(false); setShowQuickBp(true); }}
+                  onLogSugar={() => { setQuickSugarShowPresets(false); setShowQuickSugar(true); }}
+                  onLogFood={() => setShowQuickFood(true)}
+                  onLogMedication={() => setShowQuickMed(true)}
+                  compact
+                />
               </div>
-            </div>
 
-            {/* Chat section: no fixed line; big headline + input + buttons unified */}
-            <div className="flex-shrink-0 bg-background pwa-input-bottom pwa-safe-x px-4 py-4">
-              <div className="max-w-2xl mx-auto space-y-4">
-                {/* Big headline - full width, part of chat section */}
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-heading font-semibold text-foreground text-center w-full">
+              {/* Optional banners */}
+              {(isUsualBp || isUsualSugar) && (
+                <div className="rounded-xl bg-primary/10 border border-primary/20 px-4 py-3">
+                  <p className="text-sm font-medium text-foreground">
+                    {isUsualBp && usualBpLocal && <>It&apos;s your usual BP time ({usualBpLocal}).</>}
+                    {isUsualBp && isUsualSugar && " "}
+                    {isUsualSugar && "Usual blood sugar logging time."}
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    {isUsualBp && (
+                      <button type="button" onClick={() => { setQuickBpShowPresets(false); setShowQuickBp(true); }} className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium touch-manipulation">
+                        Log BP
+                      </button>
+                    )}
+                    {isUsualSugar && (
+                      <button type="button" onClick={() => { setQuickSugarShowPresets(false); setShowQuickSugar(true); }} className="px-3 py-1.5 rounded-lg bg-accent text-accent-foreground text-sm font-medium touch-manipulation">
+                        Log Sugar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* How Are You Feeling Section */}
+              <div className="space-y-4 pt-4 border-t border-border/40">
+                <h2 className="text-xl sm:text-2xl font-heading font-semibold text-foreground text-center">
                   How are you feeling today{patientName ? `, ${patientName.split(" ")[0]}` : ""}?
                 </h2>
+                
                 {/* Voice mode indicator */}
                 {voiceInput.isListening && (
                   <div className="flex items-center justify-center gap-2 text-sm text-red-500 animate-pulse">
@@ -683,6 +677,7 @@ const PatientChat = ({ onOpenMenu }: { onOpenMenu: () => void }) => {
                     Speaking...
                   </div>
                 )}
+
                 {/* Single large input + send + mic */}
                 <div className="relative rounded-2xl border border-border bg-card shadow-sm focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/50 transition-all">
                   <textarea
@@ -737,8 +732,14 @@ const PatientChat = ({ onOpenMenu }: { onOpenMenu: () => void }) => {
                     </button>
                   </div>
                 </div>
+              </div>
 
-                {/* Row 1: My medications, Next appointment, Labs, Vitals, Conditions, + Log a vital (green) */}
+              {/* Quick Prompts Section */}
+              <div className="space-y-2.5 pt-2">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0 animate-pulse" />
+                  <span>Quick Prompts</span>
+                </div>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {[
                     { label: "My medications", query: "What medications am I currently taking?" },
@@ -755,32 +756,16 @@ const PatientChat = ({ onOpenMenu }: { onOpenMenu: () => void }) => {
                       {chip.label}
                     </button>
                   ))}
-                  <button
-                    onClick={() => setShowVitalModal(true)}
-                    className="px-4 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors touch-manipulation"
-                  >
-                    + Log a vital
-                  </button>
-                </div>
-
-                {/* Row 2: + Log my meal (green) */}
-                <div className="flex justify-center">
-                  <button
-                    onClick={() => setShowMealModal(true)}
-                    className="px-4 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors touch-manipulation"
-                  >
-                    + Log my meal
-                  </button>
-                </div>
-
-                {/* Footer */}
-                <div className="flex items-center justify-center gap-1.5 pt-1 text-[10px] sm:text-xs text-muted-foreground/60">
-                  <Shield className="w-3 h-3 flex-shrink-0" />
-                  <span>HIPAA Compliant · Encrypted & Private</span>
                 </div>
               </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-center gap-1.5 pt-4 text-[10px] sm:text-xs text-muted-foreground/60">
+                <Shield className="w-3 h-3 flex-shrink-0" />
+                <span>HIPAA Compliant · Encrypted & Private</span>
+              </div>
             </div>
-          </>
+          </div>
         ) : (
           /* Messages */
           <>
@@ -1362,8 +1347,8 @@ const PatientChat = ({ onOpenMenu }: { onOpenMenu: () => void }) => {
             {/* Milestone Rewards */}
             <MilestoneRewardsList data={gamification} />
 
-            {/* Weekly Challenges */}
-            <WeeklyChallengesList data={gamification} />
+            {/* Weekly Challenges - Disabled for Pilot */}
+            {/* <WeeklyChallengesList data={gamification} /> */}
 
             {/* Badges */}
             <BadgesList data={gamification} />

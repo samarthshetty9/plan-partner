@@ -99,9 +99,43 @@ export default function PatientFoodAnalysis() {
     return () => { cancelled = true; };
   }, []);
 
+  const recentLogs = useMemo(() => {
+    const now = new Date();
+    return logs.filter((log) => {
+      const logDate = new Date(log.logged_at);
+      const diffTime = now.getTime() - logDate.getTime();
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      return diffDays < 14; // Keep only logs within the last 14 days
+    });
+  }, [logs]);
+
+  const isLatestTooOld = useMemo(() => {
+    if (logs.length === 0) return false;
+    const sorted = [...logs].sort((a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime());
+    const latestDate = new Date(sorted[0].logged_at);
+    const now = new Date();
+    const diffTime = now.getTime() - latestDate.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return diffDays >= 14;
+  }, [logs]);
+
+  const emptyInsightsWithStatus = useMemo(() => {
+    return {
+      totalMeals: 0,
+      avgCalories: 0,
+      healthScore: 0,
+      topFoods: [],
+      overallAssessment: isLatestTooOld
+        ? "Your previous meal logs are weeks old and have been ignored to ensure accurate, up-to-date tracking. Please log fresh meals on the Chat page to see active insights."
+        : "No meals logged recently. Log meals from the AI Assistant page to see your nutrition insights here.",
+      strengths: [],
+      areasToImprove: [],
+    };
+  }, [isLatestTooOld]);
+
   const insights = useMemo(
-    () => (logs.length ? computeNutritionInsights(logs) : emptyInsights),
-    [logs],
+    () => (recentLogs.length ? computeNutritionInsights(recentLogs) : emptyInsightsWithStatus),
+    [recentLogs, emptyInsightsWithStatus],
   );
 
   const openEdit = (log: FoodLog) => {
@@ -146,6 +180,19 @@ export default function PatientFoodAnalysis() {
         <h1 className="text-xl sm:text-2xl font-heading font-bold text-foreground truncate">Food Analysis</h1>
         <p className="text-muted-foreground text-sm">AI-powered nutrition insights from your meal logs</p>
       </div>
+
+      {isLatestTooOld && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex items-start gap-3">
+          <UtensilsCrossed className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-amber-700 dark:text-amber-300">Outdated Logs Ignored</p>
+            <p className="text-muted-foreground mt-1">
+              Your previous meal logs are weeks old and have been ignored to ensure accurate, up-to-date tracking. Please log fresh meals from the Chat or Overview page to see active insights.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="glass-card rounded-xl p-5">
         <NutritionInsights data={insights} />
       </div>

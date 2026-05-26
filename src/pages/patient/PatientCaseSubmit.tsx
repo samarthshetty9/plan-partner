@@ -238,7 +238,7 @@ const PatientCaseSubmit = () => {
             We'll notify you as soon as hospitals are available.
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Track your request anytime in My Cases.
+            Track your request anytime in My Treatment Requests.
           </p>
         </div>
 
@@ -264,7 +264,7 @@ const PatientCaseSubmit = () => {
             Submit Another Request
           </Button>
           <Button className="flex-1" onClick={() => navigate("/patient/cases")}>
-            View My Cases
+            View My Treatment Requests
           </Button>
         </div>
       </div>

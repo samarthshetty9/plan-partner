@@ -96,7 +96,12 @@ router.post("/auth/register", async (req, res) => {
     await Profile.create({ user_id, full_name: full_name || "", phone: phoneTrimmed });
     await UserRole.create({ user_id, role: "family" });
     await FamilyConnection.updateMany(
-      { invite_email: emailNorm.trim(), status: "pending" },
+      {
+        $or: [
+          { invite_email: emailNorm.trim(), status: "pending" },
+          { invite_phone: phoneTrimmed, status: "pending" }
+        ]
+      },
       { $set: { family_user_id: user_id, status: "active" } }
     );
   } else if (roleChoice === "clinic") {

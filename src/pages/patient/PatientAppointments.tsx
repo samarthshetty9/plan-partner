@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-primary/10 text-primary",
+  requested: "bg-amber-500/10 text-amber-500",
   completed: "bg-whatsapp/10 text-whatsapp",
   cancelled: "bg-destructive/10 text-destructive",
   no_show: "bg-muted text-muted-foreground",
@@ -168,8 +169,8 @@ const PatientAppointments = () => {
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>;
 
-  const upcoming = appointments.filter(a => new Date(a.scheduled_at) >= new Date() && a.status === "scheduled");
-  const past = appointments.filter(a => new Date(a.scheduled_at) < new Date() || a.status !== "scheduled");
+  const upcoming = appointments.filter(a => new Date(a.scheduled_at) >= new Date() && (a.status === "scheduled" || a.status === "requested"));
+  const past = appointments.filter(a => new Date(a.scheduled_at) < new Date() || (a.status !== "scheduled" && a.status !== "requested"));
 
   const today = startOfDay(new Date());
   const next14Days = Array.from({ length: 14 }, (_, i) => addDays(today, i));
@@ -400,16 +401,32 @@ const PatientAppointments = () => {
           {upcoming.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Upcoming</h3>
-              {upcoming.map(a => (
-                <div key={a.id} className="glass-card rounded-xl p-4 border-l-4 border-l-primary space-y-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-heading font-semibold text-foreground">{a.title}</h4>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColors[a.status] || ""}`}>{a.status}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{format(new Date(a.scheduled_at), "EEEE, MMM d, yyyy 'at' HH:mm")} • {a.duration_minutes} min</p>
-                  {a.notes && <p className="text-sm text-muted-foreground">{a.notes}</p>}
-                </div>
-              ))}
+              <div className="glass-card rounded-xl divide-y divide-border/50">
+                {upcoming.length === 0 ? (
+                  <p className="text-sm text-muted-foreground p-4 text-center">No upcoming appointments</p>
+                ) : (
+                  upcoming.map((a) => (
+                    <div key={a.id} className="p-3 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <CalendarDays className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm text-foreground truncate">{a.title}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{format(new Date(a.scheduled_at), "MMM d, yyyy")}</span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {format(new Date(a.scheduled_at), "h:mm a")} ({a.duration_minutes}m)</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-medium capitalize shrink-0 ${statusColors[a.status] || ""}`}>
+                        {a.status.replace("_", " ")}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
           {past.length > 0 && (

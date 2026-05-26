@@ -76,7 +76,30 @@ const PatientDetail = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("overview");
   const [counts, setCounts] = useState({ vitals: 0, labs: 0, docs: 0, alerts: 0, food: 0, medicationLogs: 0 });
+
+  const refreshCounts = async () => {
+    if (!id) return;
+    try {
+      const [vitalsCount, labsCount, docsCount, alertsCount, foodCount, medLogsCountRes] = await Promise.all([
+        api.get<{ count: number }>("vitals", { patient_id: id, count: "true" }).catch(() => ({ count: 0 })),
+        api.get<{ count: number }>("lab_results", { patient_id: id, count: "true" }).catch(() => ({ count: 0 })),
+        api.get<{ count: number }>("patient_documents", { patient_id: id, count: "true" }).catch(() => ({ count: 0 })),
+        api.get<{ count: number }>("alerts", { patient_id: id, status: "open", count: "true" }).catch(() => ({ count: 0 })),
+        api.get<{ count: number }>("food_logs", { patient_id: id, count: "true" }).catch(() => ({ count: 0 })),
+        api.get<{ count: number }>(`patients/${id}/medication-logs`, { count: "true" }).catch(() => ({ count: 0 })),
+      ]);
+      setCounts({
+        vitals: (vitalsCount as { count?: number })?.count ?? 0,
+        labs: (labsCount as { count?: number })?.count ?? 0,
+        docs: (docsCount as { count?: number })?.count ?? 0,
+        alerts: (alertsCount as { count?: number })?.count ?? 0,
+        food: (foodCount as { count?: number })?.count ?? 0,
+        medicationLogs: (medLogsCountRes as { count?: number })?.count ?? 0,
+      });
+    } catch { /* ignore */ }
+  };
   const [medicationLogs, setMedicationLogs] = useState<{ id: string; logged_at: string; taken: boolean; time_of_day?: string; medication_name?: string; source?: string }[]>([]);
   const [medicationLogsTotal, setMedicationLogsTotal] = useState(0);
   const [medicationLogsLoadingMore, setMedicationLogsLoadingMore] = useState(false);
@@ -266,26 +289,31 @@ const PatientDetail = () => {
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
         <div className="flex sm:grid sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3 min-w-max sm:min-w-0">
           {[
-            { icon: Activity, color: "text-primary", value: enrollments.length, label: "Programs" },
-            { icon: TrendingUp, color: "text-whatsapp", value: avgAdherence !== null ? `${avgAdherence}%` : "—", label: "Adherence" },
-            { icon: Heart, color: "text-destructive", value: counts.vitals, label: "Vitals" },
-            { icon: FlaskConical, color: "text-accent", value: counts.labs, label: "Lab Results" },
-            { icon: FileText, color: "text-primary", value: counts.docs, label: "Documents" },
-            { icon: AlertTriangle, color: "text-destructive", value: counts.alerts, label: "Open Alerts" },
-            { icon: UtensilsCrossed, color: "text-primary", value: counts.food, label: "Food Logs" },
-            { icon: Pill, color: "text-violet-500", value: counts.medicationLogs, label: "Med logs" },
-          ].map(({ icon: Icon, color, value, label }) => (
-            <div key={label} className="glass-card rounded-xl p-3 text-center min-w-[5.5rem] flex-shrink-0 sm:flex-shrink sm:min-w-0">
+            { icon: Activity, color: "text-primary", value: enrollments.length, label: "Programs", tab: "overview" },
+            { icon: TrendingUp, color: "text-whatsapp", value: avgAdherence !== null ? `${avgAdherence}%` : "—", label: "Adherence", tab: "overview" },
+            { icon: Heart, color: "text-destructive", value: counts.vitals, label: "Vitals", tab: "vitals" },
+            { icon: FlaskConical, color: "text-accent", value: counts.labs, label: "Lab Results", tab: "labs" },
+            { icon: FileText, color: "text-primary", value: counts.docs, label: "Documents", tab: "documents" },
+            { icon: AlertTriangle, color: "text-destructive", value: counts.alerts, label: "Open Alerts", tab: "alerts" },
+            { icon: UtensilsCrossed, color: "text-primary", value: counts.food, label: "Food Logs", tab: "food" },
+            { icon: Pill, color: "text-violet-500", value: counts.medicationLogs, label: "Med logs", tab: "medication" },
+          ].map(({ icon: Icon, color, value, label, tab }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className="glass-card rounded-xl p-3 text-center min-w-[5.5rem] flex-shrink-0 sm:flex-shrink sm:min-w-0 cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all focus:outline-none"
+            >
               <Icon className={`w-4 h-4 ${color} mx-auto mb-1`} />
               <p className="text-lg font-heading font-bold text-foreground">{value}</p>
               <p className="text-[10px] text-muted-foreground whitespace-nowrap">{label}</p>
-            </div>
+            </button>
           ))}
         </div>
       </div>
 
       {/* Tabbed Content */}
-      <Tabs defaultValue="overview" className="space-y-4 w-full min-w-0">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 w-full min-w-0">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
           <TabsList className="inline-flex sm:flex sm:w-full bg-muted/50 p-1 rounded-xl min-h-[44px] flex-nowrap gap-0.5 sm:gap-1 [&>button]:min-h-[40px] [&>button]:touch-manipulation [&>button]:flex-shrink-0">
             <TabsTrigger value="overview" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
@@ -451,7 +479,7 @@ const PatientDetail = () => {
 
         {/* Food Tab */}
         <TabsContent value="food" className="min-w-0 overflow-x-hidden mt-4">
-          <PatientFoodTab patientId={patient.id} doctorId={user!.id} />
+          <PatientFoodTab patientId={patient.id} doctorId={user!.id} onLogAdded={refreshCounts} />
         </TabsContent>
 
         {/* Medication adherence tab: list of logs (taken/skipped, time, medication name) */}

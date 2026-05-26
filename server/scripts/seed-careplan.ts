@@ -79,9 +79,9 @@ async function seed() {
       complete_30days: 200,
     },
     reward_tiers: [
-      { name: "Bronze", min_mhp: 200, reward: "Free lab test at partner clinic + 10% off next plan", color: "#b45309" },
-      { name: "Silver", min_mhp: 500, reward: "Free HbA1c test + 1 free teleconsult with your doctor", color: "#6b7280" },
-      { name: "Gold", min_mhp: 1000, reward: "90-day plan at 50% off + Mediimate Premium badge + Priority doctor access", color: "#d97706" },
+      { name: "Bronze", min_mhp: 1200, reward: "Free lab test at partner clinic | 10% off next program plan", color: "#b45309" },
+      { name: "Silver", min_mhp: 3000, reward: "Free HbA1c test | 1 complimentary teleconsultation with the treating physician", color: "#6b7280" },
+      { name: "Gold", min_mhp: 5000, reward: "90-day Chronic Care Plan at 50% off | Mediimate Premium badge | Priority physician access", color: "#d97706" },
     ],
     week_themes: [
       { week: 1, theme: "Foundation & Activation", goal: "Build the logging habit. Introduce rewards. Build trust." },
@@ -211,7 +211,7 @@ async function seed() {
   });
 
   // ─── 5. Create assignments with realistic data ───
-  const targetMHP = [340, 210, 520, 145, 890]; // demo=340(Bronze), p2=210(Bronze), p3=520(Silver), p4=145, p5=890(close to Gold)
+  const targetMHP = [1340, 210, 3210, 145, 4890]; // demo=1340(Bronze), p2=210, p3=3210(Silver), p4=145, p5=4890(Silver)
   const startDate = dateNDaysAgo(14); // program started 14 days ago
 
   for (let i = 0; i < allPatientIds.length; i++) {
@@ -347,9 +347,9 @@ async function seed() {
 
     // Determine tier
     let tier: string | null = null;
-    if (target >= 1000) tier = "Gold";
-    else if (target >= 500) tier = "Silver";
-    else if (target >= 200) tier = "Bronze";
+    if (target >= 5000) tier = "Gold";
+    else if (target >= 3000) tier = "Silver";
+    else if (target >= 1200) tier = "Bronze";
 
     const assignment = await CarePlanAssignment.create({
       careplan_id: careplanId,

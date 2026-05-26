@@ -396,11 +396,13 @@ export default function PatientCarePlan() {
             </CardHeader>
             <CardContent className="p-4 sm:p-5">
                <MHPRewardPanel
+                  assignmentId={a.id}
                   balance={a.mhp_balance || 0}
                   tier={a.mhp_tier}
                   history={a.mhp_history || []}
                   rewardTiers={cp.reward_tiers || []}
                   rewardsClaimed={a.rewards_claimed}
+                  rewardCoupons={a.reward_coupons}
                />
             </CardContent>
           </Card>

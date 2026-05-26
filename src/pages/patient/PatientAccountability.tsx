@@ -4,13 +4,14 @@ import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, Users, MessageSquare, Plus, Trash2, Loader2 } from "lucide-react";
 
-type FamilyConn = { id: string; relationship: string; invite_email: string | null; status: string; family_user_id: string | null };
+type FamilyConn = { id: string; relationship: string; invite_email: string | null; invite_phone?: string | null; phone_number?: string | null; status: string; family_user_id: string | null; access_vitals?: boolean; access_chat?: boolean; access_meds?: boolean };
 type DoctorMsg = { id: string; message: string; created_at: string; doctor_name?: string };
 
 export default function PatientAccountability() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteType, setInviteType] = useState<"email" | "phone">("email");
+  const [inviteValue, setInviteValue] = useState("");
   const [inviteRelationship, setInviteRelationship] = useState<"son" | "daughter" | "spouse" | "other">("other");
   const [adding, setAdding] = useState(false);
 
@@ -32,16 +33,25 @@ export default function PatientAccountability() {
 
   const handleAddFamily = async (e: React.FormEvent) => {
     e.preventDefault();
-    const email = inviteEmail.trim().toLowerCase();
-    if (!email) {
-      toast({ title: "Enter email", variant: "destructive" });
+    const value = inviteValue.trim();
+    if (!value) {
+      toast({ title: inviteType === "email" ? "Enter email address" : "Enter WhatsApp number", variant: "destructive" });
       return;
     }
     setAdding(true);
     try {
-      await api.post("me/family-connections", { invite_email: email, relationship: inviteRelationship });
-      toast({ title: "Invitation added", description: "When they sign up with this email as Family, they'll see your daily log status." });
-      setInviteEmail("");
+      if (inviteType === "email") {
+        await api.post("me/family-connections", { invite_email: value.toLowerCase(), relationship: inviteRelationship });
+      } else {
+        await api.post("me/family-connections", { invite_phone: value, relationship: inviteRelationship });
+      }
+      toast({
+        title: "Invitation added",
+        description: inviteType === "email"
+          ? "When they sign up with this email as Family, they'll see your daily log status."
+          : "When they sign up with this phone number as Family, they'll see your daily log status."
+      });
+      setInviteValue("");
       queryClient.invalidateQueries({ queryKey: ["me", "accountability"] });
     } catch (err: unknown) {
       toast({ title: "Failed", description: err instanceof Error ? err.message : "Could not add", variant: "destructive" });
@@ -57,6 +67,16 @@ export default function PatientAccountability() {
       toast({ title: "Removed" });
     } catch {
       toast({ title: "Could not remove", variant: "destructive" });
+    }
+  };
+
+  const handleUpdateAccess = async (id: string, field: "access_vitals" | "access_chat" | "access_meds", value: boolean) => {
+    try {
+      await api.patch(`me/family-connections/${id}`, { [field]: value });
+      queryClient.invalidateQueries({ queryKey: ["me", "accountability"] });
+      toast({ title: "Access updated" });
+    } catch {
+      toast({ title: "Failed to update access", variant: "destructive" });
     }
   };
 
@@ -121,15 +141,33 @@ export default function PatientAccountability() {
           Family visibility
         </h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Add family members by email. Once they sign up as &quot;Family&quot;, they can see whether you logged BP, Food, Sugar, and Medication today.
+          Add family members by email or WhatsApp phone number. Once they sign up as &quot;Family&quot;, they can see whether you logged BP, Food, Sugar, and Medication today.
         </p>
+
+        {/* Email vs Phone Toggle */}
+        <div className="flex gap-1.5 mb-3.5 bg-muted/60 p-1 rounded-lg w-fit">
+          <button
+            type="button"
+            onClick={() => { setInviteType("email"); setInviteValue(""); }}
+            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${inviteType === "email" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            Email
+          </button>
+          <button
+            type="button"
+            onClick={() => { setInviteType("phone"); setInviteValue(""); }}
+            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${inviteType === "phone" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            WhatsApp (Phone)
+          </button>
+        </div>
 
         <form onSubmit={handleAddFamily} className="flex flex-wrap gap-2 mb-4">
           <input
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            placeholder="family@example.com"
+            type={inviteType === "email" ? "email" : "tel"}
+            value={inviteValue}
+            onChange={(e) => setInviteValue(e.target.value)}
+            placeholder={inviteType === "email" ? "family@example.com" : "+91 98765 43210"}
             className="flex-1 min-w-[180px] px-4 py-2.5 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
           <select
@@ -157,19 +195,67 @@ export default function PatientAccountability() {
             {family_connections.map((c) => (
               <li
                 key={c.id}
-                className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-2.5"
+                className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3"
               >
-                <span className="text-sm text-foreground capitalize">{c.relationship}</span>
-                <span className="text-sm text-muted-foreground">{c.invite_email || "—"}</span>
-                <span className="text-xs font-medium text-muted-foreground">{c.status}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFamily(c.id)}
-                  className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-destructive"
-                  aria-label="Remove"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-semibold text-foreground capitalize">{c.relationship}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-muted-foreground">
+                        {c.invite_email || c.invite_phone || c.phone_number || "—"}
+                      </span>
+                      {c.invite_email && (c.invite_phone || c.phone_number) && (
+                        <>
+                          <span className="text-xs text-muted-foreground/50">•</span>
+                          <span className="text-xs text-muted-foreground">{c.invite_phone || c.phone_number}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full">{c.status}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFamily(c.id)}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-destructive"
+                      aria-label="Remove"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Granular Access Controls */}
+                <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-border/50">
+                  <span className="text-xs font-medium text-muted-foreground">Can view:</span>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={c.access_vitals ?? true}
+                      onChange={(e) => handleUpdateAccess(c.id, "access_vitals", e.target.checked)}
+                      className="rounded border-border text-primary focus:ring-primary/50"
+                    />
+                    <span className="text-xs text-foreground select-none">Vitals</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={c.access_meds ?? true}
+                      onChange={(e) => handleUpdateAccess(c.id, "access_meds", e.target.checked)}
+                      className="rounded border-border text-primary focus:ring-primary/50"
+                    />
+                    <span className="text-xs text-foreground select-none">Medications</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={c.access_chat ?? false}
+                      onChange={(e) => handleUpdateAccess(c.id, "access_chat", e.target.checked)}
+                      className="rounded border-border text-primary focus:ring-primary/50"
+                    />
+                    <span className="text-xs text-foreground select-none">Chat/Messages</span>
+                  </label>
+                </div>
               </li>
             ))}
           </ul>

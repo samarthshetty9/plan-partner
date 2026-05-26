@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Users, Layers, Activity, AlertTriangle, TrendingUp, CalendarDays, Building2, Plus, ArrowRight, Copy, Check, Download, Share2, QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -137,12 +137,12 @@ const Dashboard = () => {
   }).length;
 
   const cards = [
-    { label: "Total Patients", value: stats.totalPatients, icon: Users, color: "text-primary" },
-    { label: "Active Programs", value: stats.activePrograms, icon: Layers, color: "text-accent" },
-    { label: "Active Enrollments", value: stats.activeEnrollments, icon: Activity, color: "text-whatsapp" },
-    { label: "At-Risk Patients", value: stats.atRiskPatients, icon: AlertTriangle, color: "text-destructive" },
-    { label: "Upcoming (7d)", value: upcomingCount, icon: CalendarDays, color: "text-primary" },
-    { label: "Avg. Adherence", value: enrollments.length > 0 ? Math.round(enrollments.reduce((s, e) => s + (e.adherence_pct ?? 0), 0) / enrollments.length) + "%" : "—", icon: TrendingUp, color: "text-whatsapp" },
+    { label: "Total Patients", value: stats.totalPatients, icon: Users, color: "text-primary", to: "/dashboard/patients" },
+    { label: "Active Programs", value: stats.activePrograms, icon: Layers, color: "text-accent", to: "/dashboard/programs" },
+    { label: "Active Enrollments", value: stats.activeEnrollments, icon: Activity, color: "text-whatsapp", to: "/dashboard/enrollments" },
+    { label: "At-Risk Patients", value: stats.atRiskPatients, icon: AlertTriangle, color: "text-destructive", to: "/dashboard/patients?status=at_risk" },
+    { label: "Upcoming (7d)", value: upcomingCount, icon: CalendarDays, color: "text-primary", to: "/dashboard/appointments" },
+    { label: "Avg. Adherence", value: enrollments.length > 0 ? Math.round(enrollments.reduce((s, e) => s + (e.adherence_pct ?? 0), 0) / enrollments.length) + "%" : "—", icon: TrendingUp, color: "text-whatsapp", to: "/dashboard/enrollments" },
   ];
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>;
@@ -206,13 +206,13 @@ const Dashboard = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         {cards.map((card) => (
-          <div key={card.label} className="glass-card rounded-xl p-3 sm:p-4 space-y-1.5 sm:space-y-2">
+          <Link key={card.label} to={card.to} className="glass-card rounded-xl p-3 sm:p-4 space-y-1.5 sm:space-y-2 hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer block">
             <div className="flex items-center justify-between">
               <span className="text-[10px] sm:text-xs text-muted-foreground">{card.label}</span>
               <card.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${card.color}`} />
             </div>
             <div className="text-xl sm:text-2xl font-heading font-bold text-foreground">{card.value}</div>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -303,8 +303,8 @@ const Dashboard = () => {
               ) : (
                 <div className="h-52 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={statusBreakdown} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4} dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                    <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <Pie data={statusBreakdown} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={4} dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
                         {statusBreakdown.map((_, i) => (
                           <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                         ))}

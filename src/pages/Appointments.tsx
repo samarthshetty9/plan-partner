@@ -27,6 +27,7 @@ interface Patient {
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-primary/10 text-primary border-primary/30",
+  requested: "bg-amber-500/10 text-amber-500 border-amber-500/30",
   completed: "bg-whatsapp/10 text-whatsapp border-whatsapp/30",
   cancelled: "bg-destructive/10 text-destructive border-destructive/30",
   no_show: "bg-muted text-muted-foreground border-border",
@@ -276,18 +277,25 @@ const Appointments = () => {
                       {format(new Date(a.scheduled_at), "HH:mm")}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs opacity-70">{a.duration_minutes} min</span>
-                    <select
-                      value={a.status}
-                      onChange={(e) => updateStatus(a.id, e.target.value)}
-                      className="text-xs px-2 py-1 rounded border border-current/20 bg-transparent"
-                    >
-                      <option value="scheduled">Scheduled</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="no_show">No Show</option>
-                    </select>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs opacity-70 font-medium">{a.duration_minutes} min</span>
+                    {a.status === "requested" ? (
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => updateStatus(a.id, "scheduled")} className="px-2 py-1 bg-whatsapp text-white rounded text-xs hover:opacity-90">Accept</button>
+                        <button onClick={() => updateStatus(a.id, "cancelled")} className="px-2 py-1 bg-destructive text-white rounded text-xs hover:opacity-90">Decline</button>
+                      </div>
+                    ) : (
+                      <select
+                        value={a.status}
+                        onChange={(e) => updateStatus(a.id, e.target.value)}
+                        className="text-xs px-2 py-1 rounded border border-current/20 bg-transparent"
+                      >
+                        <option value="scheduled">Scheduled</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="no_show">No Show</option>
+                      </select>
+                    )}
                   </div>
                   {a.notes && <p className="text-xs opacity-70">{a.notes}</p>}
                 </div>

@@ -26,6 +26,7 @@ interface FoodLog {
 interface Props {
   patientId: string;
   doctorId: string;
+  onLogAdded?: () => void;
 }
 
 const mealColors: Record<string, string> = {
@@ -44,7 +45,7 @@ const mealEmoji: Record<string, string> = {
   other: "🍽️",
 };
 
-const PatientFoodTab = ({ patientId, doctorId }: Props) => {
+const PatientFoodTab = ({ patientId, doctorId, onLogAdded }: Props) => {
   const [logs, setLogs] = useState<FoodLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -77,6 +78,7 @@ const PatientFoodTab = ({ patientId, doctorId }: Props) => {
       toast.success("Food log added!");
       setMessage("");
       fetchLogs();
+      onLogAdded?.();
     } catch {
       toast.error("Failed to add food log");
     }
@@ -111,6 +113,30 @@ const PatientFoodTab = ({ patientId, doctorId }: Props) => {
     { name: "Carbs", value: todayCarbs, color: "hsl(var(--accent))" },
     { name: "Fat", value: todayFat, color: "hsl(var(--destructive))" },
   ];
+
+  // Group logs by date
+  const groupedLogs = useMemo(() => {
+    const groups: Record<string, { date: string, logs: FoodLog[], totalCalories: number, totalProtein: number, totalCarbs: number, totalFat: number }> = {};
+    logs.forEach(log => {
+      const dateKey = format(new Date(log.logged_at), "yyyy-MM-dd");
+      if (!groups[dateKey]) {
+        groups[dateKey] = {
+          date: dateKey,
+          logs: [],
+          totalCalories: 0,
+          totalProtein: 0,
+          totalCarbs: 0,
+          totalFat: 0,
+        };
+      }
+      groups[dateKey].logs.push(log);
+      groups[dateKey].totalCalories += (log.total_calories || 0);
+      groups[dateKey].totalProtein += (log.total_protein || 0);
+      groups[dateKey].totalCarbs += (log.total_carbs || 0);
+      groups[dateKey].totalFat += (log.total_fat || 0);
+    });
+    return Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
+  }, [logs]);
 
   if (loading) return <div className="flex items-center justify-center h-32"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
 
@@ -223,39 +249,56 @@ const PatientFoodTab = ({ patientId, doctorId }: Props) => {
         )}
       </div>
 
-      {/* Food Log History */}
-      <div className="glass-card rounded-xl p-5 space-y-3">
+      {/* Food Log History Grouped */}
+      <div className="glass-card rounded-xl p-5 space-y-4">
         <h3 className="font-heading font-semibold text-foreground text-sm">Food Log History</h3>
-        {logs.length === 0 ? (
+        {groupedLogs.length === 0 ? (
           <p className="text-sm text-muted-foreground">No food logs yet. Use the input above to log meals.</p>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {logs.map((log) => (
-              <div key={log.id} className="p-3 rounded-lg border border-border/50 bg-muted/20 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm text-foreground">
-                    {mealEmoji[log.meal_type] || "🍽️"} {log.meal_type.charAt(0).toUpperCase() + log.meal_type.slice(1)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {format(new Date(log.logged_at), "MMM d, yyyy HH:mm")}
-                  </span>
+          <div className="space-y-6">
+            {groupedLogs.map((group) => (
+              <div key={group.date} className="space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                  <h4 className="font-heading font-semibold text-foreground text-sm">
+                    {format(new Date(group.date), "EEEE, MMM d, yyyy")}
+                  </h4>
+                  <div className="flex gap-3 text-[10px] sm:text-xs font-medium text-muted-foreground">
+                    <span className="text-destructive">🔥 {group.totalCalories} cal</span>
+                    <span className="text-primary">🥩 {group.totalProtein}g P</span>
+                    <span className="text-accent">🌾 {group.totalCarbs}g C</span>
+                    <span>💧 {group.totalFat}g F</span>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {log.food_items?.map((item: any, i: number) => (
-                    <span key={i} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
-                      {item.quantity} {item.unit} {item.name}
-                    </span>
+                <div className="space-y-2">
+                  {group.logs.map((log) => (
+                    <div key={log.id} className="p-3 rounded-lg border border-border/50 bg-muted/20 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm text-foreground">
+                          {mealEmoji[log.meal_type] || "🍽️"} {log.meal_type.charAt(0).toUpperCase() + log.meal_type.slice(1)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(log.logged_at), "HH:mm")}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {log.food_items?.map((item: any, i: number) => (
+                          <span key={i} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
+                            {item.quantity} {item.unit} {item.name}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                        <span>🔥 {log.total_calories || 0}</span>
+                        <span>🥩 {log.total_protein || 0}</span>
+                        <span>🌾 {log.total_carbs || 0}</span>
+                        <span>💧 {log.total_fat || 0}</span>
+                      </div>
+                      {log.raw_message && (
+                        <p className="text-xs text-muted-foreground italic mt-2">"{log.raw_message}"</p>
+                      )}
+                    </div>
                   ))}
                 </div>
-                <div className="flex gap-3 text-xs text-muted-foreground">
-                  <span>🔥 {log.total_calories || 0} cal</span>
-                  <span>🥩 {log.total_protein || 0}g protein</span>
-                  <span>🌾 {log.total_carbs || 0}g carbs</span>
-                  <span>💧 {log.total_fat || 0}g fat</span>
-                </div>
-                {log.raw_message && (
-                  <p className="text-xs text-muted-foreground italic">"{log.raw_message}"</p>
-                )}
               </div>
             ))}
           </div>

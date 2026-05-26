@@ -12,10 +12,9 @@ interface LinkRequest {
 }
 
 interface ConnectedDoctor {
-  id: string;
-  doctor_user_id: string;
-  doctor_name?: string;
-  status: string;
+  doctor_id: string;
+  doctor_name: string;
+  patient_id: string;
 }
 
 const PatientConnectDoctor = () => {
@@ -33,10 +32,10 @@ const PatientConnectDoctor = () => {
     try {
       const [list, links] = await Promise.all([
         api.get<LinkRequest[]>("me/link_requests"),
-        api.get<ConnectedDoctor[]>("patient_doctor_links", { patient_user_id: user.id }),
+        api.get<ConnectedDoctor[]>("me/doctors"),
       ]);
       setLinkRequests(Array.isArray(list) ? list : []);
-      setConnectedDoctors(Array.isArray(links) ? links.filter((l) => l.status === "active") : []);
+      setConnectedDoctors(Array.isArray(links) ? links : []);
     } catch {
       setLinkRequests([]);
       setConnectedDoctors([]);
@@ -97,7 +96,7 @@ const PatientConnectDoctor = () => {
           {connectedDoctors.length > 0 && (
             <ul className="mt-3 space-y-2">
               {connectedDoctors.map((link) => (
-                <li key={link.id} className="flex items-center gap-2 py-2 px-3 rounded-lg bg-muted/50">
+                <li key={link.doctor_id} className="flex items-center gap-2 py-2 px-3 rounded-lg bg-muted/50">
                   <Stethoscope className="w-4 h-4 text-primary" />
                   <span className="font-medium text-foreground">{link.doctor_name || "Doctor"}</span>
                 </li>

@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { Plus, Search, X, Upload, FileSpreadsheet, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 const PAGE_SIZE = 50;
 
@@ -85,6 +85,10 @@ const Patients = () => {
   const [form, setForm] = useState({ full_name: "", phone: "", age: "", gender: "male", conditions: "" });
   const [saving, setSaving] = useState(false);
 
+  // Search parameters for filter
+  const [searchParams, setSearchParams] = useSearchParams();
+  const status = searchParams.get("status") || "";
+
   // Bulk import state
   const [showImport, setShowImport] = useState(false);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
@@ -93,12 +97,16 @@ const Patients = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["patients", user?.id, page, PAGE_SIZE],
+    queryKey: ["patients", user?.id, page, PAGE_SIZE, status],
     queryFn: async () => {
-      const res = await api.get<{ items: Patient[]; total: number }>("patients", {
+      const params: Record<string, string> = {
         limit: String(PAGE_SIZE),
         skip: String(page * PAGE_SIZE),
-      });
+      };
+      if (status) {
+        params.status = status;
+      }
+      const res = await api.get<{ items: Patient[]; total: number }>("patients", params);
       return { items: res.items ?? [], total: res.total ?? 0 };
     },
     enabled: !!user,
@@ -119,7 +127,10 @@ const Patients = () => {
     enabled: !!user && showImport && csvRows.length > 0,
   });
 
-  const invalidatePatients = () => queryClient.invalidateQueries({ queryKey: ["patients"] });
+  const invalidatePatients = () => {
+    queryClient.invalidateQueries({ queryKey: ["patients"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,7 +249,22 @@ const Patients = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">Patients</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-heading font-bold text-foreground">Patients</h1>
+            {status && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-destructive/10 text-destructive border border-destructive/20 capitalize">
+                {status.replace("_", " ")}
+                <button
+                  type="button"
+                  onClick={() => setSearchParams({})}
+                  className="inline-flex items-center justify-center p-0.5 rounded-full hover:bg-destructive/20 text-destructive transition-colors focus:outline-none"
+                  title="Clear filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            )}
+          </div>
           <p className="text-muted-foreground text-sm">{totalPatients} total patients</p>
         </div>
         <div className="flex gap-2">
@@ -432,7 +458,7 @@ const Patients = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColors[p.status] || ""}`}>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize whitespace-nowrap ${statusColors[p.status] || ""}`}>
                           {p.status.replace("_", " ")}
                         </span>
                       </td>

@@ -71,7 +71,7 @@ export function QuickLogCards({
   if (compact) return grid;
 
   return (
-    <div className="w-full max-w-3xl mx-auto mb-6 sm:mb-8 overflow-x-safe">
+    <div className="w-full max-w-3xl mx-auto mb-6 sm:mb-8">
       <h1 className="text-xl sm:text-2xl md:text-3xl font-heading font-light text-foreground mb-1">
         {greeting}{firstName ? ` ${firstName}` : ""}
       </h1>

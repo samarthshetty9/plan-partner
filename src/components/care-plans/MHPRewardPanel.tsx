@@ -1,4 +1,7 @@
-import { Award, Gift, Lock, Check, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { Award, Gift, Lock, Check, ChevronRight, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 type HistoryItem = {
@@ -30,18 +33,40 @@ const actionLabels: Record<string, string> = {
 };
 
 export function MHPRewardPanel({
+  assignmentId,
   balance,
   tier,
   history,
   rewardTiers,
   rewardsClaimed,
+  rewardCoupons,
 }: {
+  assignmentId: string;
   balance: number;
   tier?: string;
   history: HistoryItem[];
   rewardTiers: RewardTier[];
   rewardsClaimed?: { bronze?: boolean; silver?: boolean; gold?: boolean };
+  rewardCoupons?: { bronze?: string; silver?: string; gold?: string };
 }) {
+  const queryClient = useQueryClient();
+  const [claimingTier, setClaimingTier] = useState<string | null>(null);
+
+  const handleClaim = async (tierName: string) => {
+    const key = tierName.toLowerCase();
+    if (key === "gold") return;
+    setClaimingTier(tierName);
+    try {
+      await api.post(`me/careplan/${assignmentId}/claim`, { tier: key });
+      queryClient.invalidateQueries({ queryKey: ["me", "careplan", assignmentId] });
+      queryClient.invalidateQueries({ queryKey: ["me", "careplans"] });
+    } catch (err) {
+      console.error("Failed to claim care plan reward:", err);
+    } finally {
+      setClaimingTier(null);
+    }
+  };
+
   const recentHistory = [...history].reverse().slice(0, 8);
 
   return (
@@ -73,13 +98,34 @@ export function MHPRewardPanel({
                 {unlocked && (
                   <div className="shrink-0">
                     {claimed ? (
-                      <Badge variant="outline" className="text-green-600 border-green-300 text-[10px]">
-                        <Check className="h-3 w-3 mr-0.5" /> Claimed
+                      <div className="text-right">
+                        <Badge variant="outline" className="text-green-600 border-green-300 text-[10px]">
+                          <Check className="h-3 w-3 mr-0.5" /> Claimed
+                        </Badge>
+                        {rewardCoupons?.[rt.name.toLowerCase() as keyof typeof rewardCoupons] && (
+                          <p className="text-[10px] font-mono text-slate-500 mt-1 select-all bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">
+                            {rewardCoupons[rt.name.toLowerCase() as keyof typeof rewardCoupons]}
+                          </p>
+                        )}
+                      </div>
+                    ) : rt.name.toLowerCase() === "gold" ? (
+                      <Badge variant="secondary" className="bg-slate-200 text-slate-500 text-[10px] cursor-not-allowed select-none">
+                        Unavailable in Pilot
                       </Badge>
                     ) : (
-                      <Badge className="bg-amber-500 hover:bg-amber-600 text-[10px]">
-                        <Gift className="h-3 w-3 mr-0.5" /> Claim
-                      </Badge>
+                      <button
+                        type="button"
+                        disabled={claimingTier != null}
+                        onClick={() => handleClaim(rt.name)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg shadow-sm transition-colors disabled:opacity-50"
+                      >
+                        {claimingTier === rt.name ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Gift className="h-3 w-3" />
+                        )}
+                        Claim
+                      </button>
                     )}
                   </div>
                 )}

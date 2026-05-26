@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { Plus, X, UserPlus, TrendingUp, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Enrollment {
   id: string;
@@ -39,6 +40,7 @@ const statusColors: Record<string, string> = {
 const Enrollments = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -93,6 +95,8 @@ const Enrollments = () => {
       setShowForm(false);
       setForm({ patient_id: "", program_id: "" });
       fetchData();
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
     } catch (err: unknown) {
       toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
     }
@@ -105,6 +109,8 @@ const Enrollments = () => {
     try {
       await api.patch("enrollments/" + id, updates);
       fetchData();
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
     } catch (err: unknown) {
       toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
     }
@@ -121,6 +127,8 @@ const Enrollments = () => {
       setEditingAdherence(null);
       setAdherenceValue("");
       fetchData();
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
     } catch (err: unknown) {
       toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
     }

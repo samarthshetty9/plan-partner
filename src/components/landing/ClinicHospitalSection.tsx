@@ -135,8 +135,8 @@ const ClinicHospitalSection = ({ onContact }: { onContact: (type: ContactType) =
         </h3>
         <div className="grid sm:grid-cols-3 gap-6">
           {whoItsFor.map((w) => (
-            <div key={w.title} className="rounded-2xl border border-border bg-background p-6 text-center hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <div key={w.title} className="rounded-2xl border border-border bg-background p-6 text-left hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                 <w.icon className="w-6 h-6 text-primary" />
               </div>
               <h4 className="font-heading font-bold text-foreground mb-3">{w.title}</h4>

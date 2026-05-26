@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
-import { Star, MessageSquare, Video, Quote, X } from "lucide-react";
+import { Star, MessageSquare, Video, Quote, X, Send, Plus, User } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface FeedbackItem {
   id: string;
@@ -25,6 +26,11 @@ const DoctorFeedback = () => {
   const [filterTestimonial, setFilterTestimonial] = useState<boolean | "all">("all");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
+  const [patients, setPatients] = useState<{ id: string; full_name: string }[]>([]);
+  const [showSendForm, setShowSendForm] = useState(false);
+  const [sendForm, setSendForm] = useState({ patient_id: "", message: "", rating: 0 });
+  const [sending, setSending] = useState(false);
+  const { toast } = useToast();
 
   const playVideo = useCallback(async (feedbackId: string) => {
     setVideoLoading(true);
@@ -52,7 +58,33 @@ const DoctorFeedback = () => {
       .then((data) => setFeedbacks(Array.isArray(data) ? data : []))
       .catch(() => setFeedbacks([]))
       .finally(() => setLoading(false));
+    // Fetch patients for send form
+    api.get<{ items: { id: string; full_name: string }[] }>("patients", { limit: "200", skip: "0" })
+      .then((r) => setPatients(r.items ?? []))
+      .catch(() => setPatients([]));
   }, [user, filterTestimonial]);
+
+  const handleSendFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sendForm.patient_id || !sendForm.message.trim()) {
+      toast({ title: "Select a patient and write a message", variant: "destructive" });
+      return;
+    }
+    setSending(true);
+    try {
+      await api.post("clinical_feedback", {
+        patient_id: sendForm.patient_id,
+        message: sendForm.message.trim(),
+        rating: sendForm.rating || null,
+      });
+      toast({ title: "Feedback sent to patient" });
+      setShowSendForm(false);
+      setSendForm({ patient_id: "", message: "", rating: 0 });
+    } catch (err) {
+      toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
+    }
+    setSending(false);
+  };
 
   const avgRating =
     feedbacks.length > 0
@@ -80,6 +112,13 @@ const DoctorFeedback = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setShowSendForm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
+          >
+            <Send className="w-4 h-4" /> Send Feedback
+          </button>
+          <button
+            type="button"
             onClick={() => setFilterTestimonial("all")}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filterTestimonial === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -98,6 +137,39 @@ const DoctorFeedback = () => {
           </button>
         </div>
       </div>
+
+      {/* Send Feedback Modal */}
+      {showSendForm && (
+        <div className="fixed inset-0 bg-foreground/20 z-50 flex items-center justify-center p-4" onClick={() => setShowSendForm(false)}>
+          <div className="glass-card rounded-2xl p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-heading font-bold text-foreground">Send Clinical Feedback</h2>
+              <button onClick={() => setShowSendForm(false)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+            </div>
+            <p className="text-sm text-muted-foreground">Send personalized clinical feedback or progress notes to a patient. They'll see this in their notifications.</p>
+            <form onSubmit={handleSendFeedback} className="space-y-3">
+              <select required value={sendForm.patient_id} onChange={e => setSendForm({ ...sendForm, patient_id: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50">
+                <option value="">Select patient...</option>
+                {patients.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+              </select>
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-1">Progress Rating (optional)</label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button key={n} type="button" onClick={() => setSendForm({ ...sendForm, rating: sendForm.rating === n ? 0 : n })} className="p-1">
+                      <Star className={`w-6 h-6 ${sendForm.rating >= n ? "fill-amber-400 text-amber-500" : "text-muted-foreground/30"}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <textarea required placeholder="Write your clinical feedback, progress notes, or encouragement..." value={sendForm.message} onChange={e => setSendForm({ ...sendForm, message: e.target.value })} rows={4} className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
+              <button type="submit" disabled={sending} className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 disabled:opacity-50">
+                {sending ? "Sending..." : "Send Feedback"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {feedbacks.length === 0 ? (
         <div className="glass-card rounded-xl p-12 text-center text-muted-foreground">

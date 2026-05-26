@@ -418,18 +418,17 @@ router.post("/me/careplan/:assignmentId/log-action", requireAuth, async (req, re
   a.mhp_balance += bonusPoints;
 
   // Check tier thresholds
-  const tiers = [
-    { name: "Gold", min: 1000 },
-    { name: "Silver", min: 500 },
-    { name: "Bronze", min: 200 },
-  ];
+  const tiers = (careplan as any).reward_tiers || [];
+  const sortedTiers = [...tiers].sort((x, y) => (y.min_mhp || 0) - (x.min_mhp || 0));
   const oldTier = a.mhp_tier;
-  for (const tier of tiers) {
-    if (a.mhp_balance >= tier.min) {
-      a.mhp_tier = tier.name;
+  let newTier = "";
+  for (const tier of sortedTiers) {
+    if (a.mhp_balance >= (tier.min_mhp || 0)) {
+      newTier = tier.name;
       break;
     }
   }
+  a.mhp_tier = newTier || null;
 
   // Notify on new tier
   if (a.mhp_tier && a.mhp_tier !== oldTier) {
@@ -510,6 +509,85 @@ router.post("/me/careplan/:assignmentId/log-action", requireAuth, async (req, re
   });
 });
 
+// ─── POST /me/careplan/:assignmentId/claim ───
+router.post("/me/careplan/:assignmentId/claim", requireAuth, async (req, res) => {
+  const link = await getPatientForCurrentUser(req);
+  if (!link) return res.status(404).json({ error: "Patient record not linked" });
+
+  const { assignmentId } = req.params;
+  const assignment = await CarePlanAssignment.findById(assignmentId);
+  if (!assignment) return res.status(404).json({ error: "Assignment not found" });
+  const a = assignment as any;
+
+  // Verify ownership
+  if (!link.patient_ids.includes(a.patient_id)) {
+    return res.status(403).json({ error: "Access denied" });
+  }
+
+  const { tier } = req.body;
+  if (!tier || !["bronze", "silver", "gold"].includes(tier.toLowerCase())) {
+    return res.status(400).json({ error: "Valid tier required: bronze, silver, gold" });
+  }
+
+  const tierKey = tier.toLowerCase();
+  if (tierKey === "gold") {
+    return res.status(400).json({ error: "Gold tier is disabled for the pilot" });
+  }
+
+  const careplan = await CarePlan.findById(a.careplan_id).lean();
+  if (!careplan) return res.status(404).json({ error: "Care plan not found" });
+
+  const tierDef = (careplan as any).reward_tiers?.find(
+    (t: any) => t.name.toLowerCase() === tierKey
+  );
+  if (!tierDef) {
+    return res.status(404).json({ error: `Tier ${tier} not defined in care plan` });
+  }
+
+  const minMhp = tierDef.min_mhp || 0;
+  if (a.mhp_balance < minMhp) {
+    return res.status(400).json({ error: "Insufficient points to claim this tier" });
+  }
+
+  if (a.rewards_claimed?.[tierKey]) {
+    return res.status(400).json({ error: "Tier already claimed" });
+  }
+
+  // Generate Coupon Code
+  const prefix = tierKey === "bronze" ? "BRONZE-LAB-" : "SILVER-HBA1C-";
+  const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const couponCode = `${prefix}${randomStr}`;
+
+  // Initialize rewards_claimed and reward_coupons if not present
+  if (!a.rewards_claimed) a.rewards_claimed = {};
+  if (!a.reward_coupons) a.reward_coupons = {};
+
+  a.rewards_claimed[tierKey] = true;
+  a.reward_coupons[tierKey] = couponCode;
+
+  // Log in history
+  const now = new Date();
+  const currentDay = a.current_day || 1;
+  a.mhp_history.push({
+    action: `claim_reward_${tierKey}`,
+    points: 0,
+    date: now,
+    day: currentDay,
+  });
+
+  assignment.markModified("rewards_claimed");
+  assignment.markModified("reward_coupons");
+  assignment.markModified("mhp_history");
+  await assignment.save();
+
+  return res.json({
+    success: true,
+    coupon_code: couponCode,
+    rewards_claimed: a.rewards_claimed,
+    reward_coupons: a.reward_coupons,
+  });
+});
+
 // ─── POST /me/careplan/:assignmentId/screen-complication ───
 router.post("/me/careplan/:assignmentId/screen-complication", requireAuth, async (req, res) => {
   const link = await getPatientForCurrentUser(req);
@@ -552,10 +630,15 @@ router.post("/me/careplan/:assignmentId/screen-complication", requireAuth, async
   const newBalance = (a.mhp_balance || 0) + points;
 
   // Check tier change
+  const tiers = (careplan as any)?.reward_tiers || [];
+  const sortedTiers = [...tiers].sort((x, y) => (y.min_mhp || 0) - (x.min_mhp || 0));
   let newTier = a.mhp_tier;
-  if (newBalance >= 1000) newTier = "Gold";
-  else if (newBalance >= 500) newTier = "Silver";
-  else if (newBalance >= 200) newTier = "Bronze";
+  for (const tier of sortedTiers) {
+    if (newBalance >= (tier.min_mhp || 0)) {
+      newTier = tier.name;
+      break;
+    }
+  }
 
   updateSet.mhp_balance = newBalance;
   updateSet.mhp_tier = newTier;
@@ -1017,9 +1100,9 @@ router.post("/care-plans/ai-generate", requireAuth, async (req, res) => {
 
   // ─ Reward tiers ─
   const rewardTiers = [
-    { name: "Bronze", min_mhp: 200, reward: "Free lab test at partner clinic + 10% off next plan", color: "#b45309" },
-    { name: "Silver", min_mhp: 500, reward: `Free ${isDiabetes ? "HbA1c test" : "health check-up"} + 1 free teleconsult`, color: "#6b7280" },
-    { name: "Gold", min_mhp: 1000, reward: `${dur * 3}-day plan at 50% off + Mediimate Premium badge + Priority doctor access`, color: "#d97706" },
+    { name: "Bronze", min_mhp: 1200, reward: "Free lab test at partner clinic | 10% off next program plan", color: "#b45309" },
+    { name: "Silver", min_mhp: 3000, reward: "Free HbA1c test | 1 complimentary teleconsultation with the treating physician", color: "#6b7280" },
+    { name: "Gold", min_mhp: 5000, reward: "90-day Chronic Care Plan at 50% off | Mediimate Premium badge | Priority physician access", color: "#d97706" },
   ];
 
   // ─ Description ─

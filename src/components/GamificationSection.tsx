@@ -6,12 +6,15 @@ export type MilestoneData = {
   key: string;
   title: string;
   description: string;
-  required_logs: number;
-  current_logs: number;
+  required_logs?: number;
+  current_logs?: number;
+  required_points?: number;
+  current_points?: number;
   unlocked: boolean;
   unlocked_at?: string;
   claimed: boolean;
   claimed_at?: string;
+  coupon_code?: string;
   icon: string;
 };
 
@@ -189,7 +192,9 @@ export function MilestoneRewardsList({ data }: { data: GamificationData | undefi
       <ul className="space-y-3">
         {data.milestones.map((m) => {
           const Icon = MILESTONE_ICONS[m.icon] ?? Gift;
-          const pct = Math.min(100, Math.round((m.current_logs / m.required_logs) * 100));
+          const currentVal = m.current_points ?? 0;
+          const requiredVal = m.required_points ?? 1;
+          const pct = Math.min(100, Math.round((currentVal / requiredVal) * 100));
           return (
             <li
               key={m.key}
@@ -197,7 +202,9 @@ export function MilestoneRewardsList({ data }: { data: GamificationData | undefi
                 m.unlocked
                   ? m.claimed
                     ? "border-green-500/30 bg-green-500/5"
-                    : "border-primary/30 bg-primary/5"
+                    : m.key === "gold"
+                      ? "border-amber-500/30 bg-amber-500/5"
+                      : "border-primary/30 bg-primary/5"
                   : "border-border/60 bg-muted/20"
               }`}
             >
@@ -219,16 +226,21 @@ export function MilestoneRewardsList({ data }: { data: GamificationData | undefi
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className={`text-sm font-medium ${m.unlocked ? "text-foreground" : "text-muted-foreground"}`}>
+                    <p className={`text-sm font-semibold ${m.unlocked ? "text-foreground" : "text-muted-foreground"}`}>
                       {m.title}
                     </p>
                     {m.unlocked && !m.claimed && (
                       <button
                         type="button"
                         onClick={() => handleClaim(m.key)}
-                        className="px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors touch-manipulation"
+                        disabled={m.key === "gold"}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors touch-manipulation ${
+                          m.key === "gold"
+                            ? "bg-muted text-muted-foreground cursor-not-allowed border border-border"
+                            : "bg-primary text-primary-foreground hover:bg-primary/90"
+                        }`}
                       >
-                        Claim
+                        {m.key === "gold" ? "Unavailable in Pilot" : "Claim"}
                       </button>
                     )}
                     {m.claimed && (
@@ -236,6 +248,15 @@ export function MilestoneRewardsList({ data }: { data: GamificationData | undefi
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{m.description}</p>
+                  
+                  {m.claimed && m.coupon_code && (
+                    <div className="mt-2 bg-green-500/10 border border-green-500/20 rounded-md p-2 flex items-center justify-between">
+                      <span className="text-xs text-green-700 dark:text-green-400 font-medium">Coupon Code:</span>
+                      <code className="text-xs font-mono bg-white dark:bg-black/20 px-2 py-0.5 rounded text-green-600 dark:text-green-300 font-bold select-all">
+                        {m.coupon_code}
+                      </code>
+                    </div>
+                  )}
                   {!m.unlocked && (
                     <div className="mt-2">
                       <div className="flex items-center gap-2">
@@ -246,7 +267,7 @@ export function MilestoneRewardsList({ data }: { data: GamificationData | undefi
                           />
                         </div>
                         <span className="text-xs font-medium tabular-nums text-muted-foreground">
-                          {m.current_logs}/{m.required_logs}
+                          {currentVal}/{requiredVal} MHP
                         </span>
                       </div>
                     </div>
@@ -271,7 +292,7 @@ export function GamificationBlock({ data }: { data: GamificationData | undefined
   if (data == null) return null;
   const hasStreak = data.streak_days > 0;
   const hasBadges = data.badges && data.badges.length > 0;
-  const hasChallenges = data.weekly_challenges && data.weekly_challenges.length > 0;
+  const hasChallenges = false; // Temporarily disabled for Pilot
   const hasMilestones = data.milestones && data.milestones.length > 0;
   return (
     <div className="space-y-4 min-w-0">
@@ -288,9 +309,9 @@ export function GamificationBlock({ data }: { data: GamificationData | undefined
         )}
         <LevelBadge data={data} />
       </div>
-      {/* Milestones & Weekly challenges — side by side */}
+      {/* Milestones & Weekly challenges — side by side if challenges active */}
       {(hasMilestones || hasChallenges) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+        <div className={`grid grid-cols-1 ${hasChallenges ? "lg:grid-cols-2" : ""} gap-3 sm:gap-4`}>
           {hasMilestones && <MilestoneRewardsList data={data} />}
           {hasChallenges && <WeeklyChallengesList data={data} />}
         </div>

@@ -63,6 +63,9 @@ import {
   sendFamilyInvitationEmail,
   sendDoctorMessageEmail,
   sendAppointmentBookedEmail,
+  sendAppointmentRequestedEmail,
+  sendAppointmentRequestDoctorEmail,
+  sendAppointmentDeclinedEmail,
   sendAppointmentCompletedEmail,
   sendBadgeEarnedEmail,
   sendStreakMilestoneEmail,
@@ -73,6 +76,7 @@ import {
   sendDailyHealthSummaryEmail,
   sendWeeklyComplianceEmail,
 } from "../services/email.js";
+import { whatsapp } from "../services/whatsapp.js";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production";
@@ -322,22 +326,22 @@ router.post("/me/appointments", requireAuth, async (req, res) => {
     duration_minutes: duration_minutes != null ? Math.max(5, parseInt(String(duration_minutes), 10) || 30) : 30,
     notes: notes != null ? String(notes).trim() || null : null,
     appointment_type: appointment_type || "consultation",
+    status: "requested",
     ...(clinic_id ? { clinic_id: String(clinic_id) } : {}),
   });
-  // Email: appointment booked
+  // Email: appointment requested
   try {
-    const authU = await AuthUser.findById(userId).select("email full_name").lean();
+    const authU = await AuthUser.findOne({ user_id: userId }).select("email full_name").lean();
+    const dateStr = scheduledAt.toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
     if (authU && (authU as any).email) {
-      const dateStr = scheduledAt.toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
-      sendAppointmentBookedEmail((authU as any).email, (authU as any).full_name || "there", String(title).trim(), dateStr, userId).catch(() => {});
+      sendAppointmentRequestedEmail((authU as any).email, (authU as any).full_name || "there", String(title).trim(), dateStr, userId).catch(() => {});
     }
     // Also notify the doctor
-    const doctorAuth = await AuthUser.findById(doctor_id).select("email full_name").lean();
+    const doctorAuth = await AuthUser.findOne({ user_id: doctor_id }).select("email full_name").lean();
     if (doctorAuth && (doctorAuth as any).email) {
-      const patAuth = await AuthUser.findById(userId).select("full_name").lean();
+      const patAuth = await AuthUser.findOne({ user_id: userId }).select("full_name").lean();
       const pName = (patAuth as any)?.full_name || "A patient";
-      const dateStr2 = scheduledAt.toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
-      sendAppointmentBookedEmail((doctorAuth as any).email, (doctorAuth as any).full_name || "Doctor", `${pName} — ${String(title).trim()}`, dateStr2, doctor_id).catch(() => {});
+      sendAppointmentRequestDoctorEmail((doctorAuth as any).email, (doctorAuth as any).full_name || "Doctor", pName, String(title).trim(), dateStr, doctor_id).catch(() => {});
     }
   } catch {}
   res.status(201).json({ ...doc.toJSON(), id: (doc as any)._id?.toString() });
@@ -899,8 +903,26 @@ router.post("/me/vitals", requireAuth, async (req, res) => {
   } catch {}
 });
 
+router.patch("/me/vitals/:id", requireAuth, async (req, res) => {
+  const link = await getPatientForCurrentUser(req);
+  if (!link) return res.status(404).json({ error: "Patient record not linked" });
+  const filter = link.patient_ids.length > 1 ? { patient_id: { $in: link.patient_ids }, _id: req.params.id } : { patient_id: link.patient_id, _id: req.params.id };
+  const updated = await Vital.findOneAndUpdate(filter, { $set: req.body }, { new: true }).lean();
+  if (!updated) return res.status(404).json({ error: "Not found" });
+  res.json({ ...updated, id: updated._id?.toString(), _id: undefined, __v: undefined });
+});
+
+router.delete("/me/vitals/:id", requireAuth, async (req, res) => {
+  const link = await getPatientForCurrentUser(req);
+  if (!link) return res.status(404).json({ error: "Patient record not linked" });
+  const filter = link.patient_ids.length > 1 ? { patient_id: { $in: link.patient_ids }, _id: req.params.id } : { patient_id: link.patient_id, _id: req.params.id };
+  const deleted = await Vital.findOneAndDelete(filter);
+  if (!deleted) return res.status(404).json({ error: "Not found" });
+  res.json({ ok: true });
+});
+
 // ---------- Instant rewards (points, health score, today progress) ----------
-const POINTS = { blood_pressure: 10, blood_sugar: 15, food: 5, medication: 20 } as const;
+const POINTS = { blood_pressure: 10, blood_sugar: 10, food: 5, medication: 5 } as const;
 const HEALTH_SCORE_PER_ITEM = 25; // 4 items × 25 = 100
 
 type RewardsFilter = { patient_id: string } | { patient_id: { $in: string[] } };
@@ -928,7 +950,15 @@ async function getRewardsForFilter(filter: RewardsFilter): Promise<{
     food: foodCount * POINTS.food,
     medication: medCount * POINTS.medication,
   };
-  const total_points = points_breakdown.blood_pressure + points_breakdown.blood_sugar + points_breakdown.food + points_breakdown.medication;
+  let total_points = points_breakdown.blood_pressure + points_breakdown.blood_sugar + points_breakdown.food + points_breakdown.medication;
+  try {
+    const gam = await PatientGamification.findOne(filter).select("total_points").lean();
+    if (gam && typeof (gam as any).total_points === "number") {
+      total_points = (gam as any).total_points;
+    }
+  } catch (err) {
+    console.error("Error fetching gamification total_points:", err);
+  }
   const health_score =
     (!!bpToday ? HEALTH_SCORE_PER_ITEM : 0) +
     (!!sugarToday ? HEALTH_SCORE_PER_ITEM : 0) +
@@ -1004,11 +1034,10 @@ const WEEKLY_CHALLENGES: { key: string; title: string; target_days: number; rewa
 ];
 
 // Layer 7: Milestone rewards — tangible real-world benefits
-const MILESTONE_DEFINITIONS: { key: string; title: string; description: string; required_logs: number; icon: string }[] = [
-  { key: "free_consultation", title: "Free Doctor Consultation", description: "Complete 20 health logs to unlock a free doctor consultation", required_logs: 20, icon: "stethoscope" },
-  { key: "medicine_discount", title: "Medicine Discount", description: "Complete 40 health logs to unlock a medicine discount", required_logs: 40, icon: "pill" },
-  { key: "health_report", title: "Health Report", description: "Complete 60 health logs to unlock a detailed health report", required_logs: 60, icon: "file-text" },
-  { key: "premium_checkup", title: "Premium Health Checkup", description: "Complete 100 health logs to unlock a premium health checkup", required_logs: 100, icon: "heart-pulse" },
+const MILESTONE_DEFINITIONS: { key: string; title: string; description: string; required_points: number; icon: string }[] = [
+  { key: "bronze", title: "Bronze Tier", description: "Free lab test at partner clinic | 10% off next program plan", required_points: 1200, icon: "stethoscope" },
+  { key: "silver", title: "Silver Tier", description: "Free HbA1c test | 1 complimentary teleconsultation with the treating physician", required_points: 3000, icon: "pill" },
+  { key: "gold", title: "Gold Tier", description: "90-day Chronic Care Plan at 50% off | Mediimate Premium badge | Priority physician access", required_points: 5000, icon: "heart-pulse" },
 ];
 
 /**
@@ -1084,6 +1113,13 @@ async function updateGamificationState(
       g.current_streak = 1;
     }
     g.last_log_date = today;
+
+    // Streak bonus points
+    if (g.current_streak === 3) {
+      g.total_points = (g.total_points || 0) + 25;
+    } else if (g.current_streak === 7) {
+      g.total_points = (g.total_points || 0) + 75;
+    }
   }
   if (g.current_streak > (g.longest_streak || 0)) {
     g.longest_streak = g.current_streak;
@@ -1096,7 +1132,7 @@ async function updateGamificationState(
       const patient = await Patient.findById(patientId).select("patient_user_id full_name").lean();
       const uid = (patient as any)?.patient_user_id;
       if (uid) {
-        const authU = await AuthUser.findById(uid).select("email full_name").lean();
+        const authU = await AuthUser.findOne({ user_id: uid }).select("email full_name").lean();
         if (authU && (authU as any).email) {
           sendStreakMilestoneEmail((authU as any).email, (authU as any).full_name || (patient as any)?.full_name || "there", g.current_streak, uid).catch(() => {});
         }
@@ -1189,7 +1225,7 @@ router.get("/me/gamification", requireAuth, async (req, res) => {
       const patientRec = await Patient.findById(patientId).select("patient_user_id full_name").lean();
       const uid = (patientRec as any)?.patient_user_id;
       if (uid) {
-        const authU = await AuthUser.findById(uid).select("email full_name").lean();
+        const authU = await AuthUser.findOne({ user_id: uid }).select("email full_name").lean();
         if (authU && (authU as any).email) {
           for (const b of newlyEarnedBadges) {
             const bDef = BADGE_DEFINITIONS.find((d) => d.key === b.key);
@@ -1233,6 +1269,12 @@ router.get("/me/gamification", requireAuth, async (req, res) => {
           completed_at: new Date(),
         });
         completed_at = (created as any).completed_at?.toISOString?.();
+        // Award challenge points
+        const gamDoc = await PatientGamification.findOne({ patient_id: patientId });
+        if (gamDoc) {
+          gamDoc.total_points = (gamDoc.total_points || 0) + ch.reward_points;
+          await gamDoc.save();
+        }
       } catch (err: any) {
         if (err?.code !== 11000) throw err;
         completed_at = new Date().toISOString();
@@ -1250,14 +1292,14 @@ router.get("/me/gamification", requireAuth, async (req, res) => {
   }
 
   // --- Layer 7: Milestone rewards (real-world benefits) ---
-  const totalLogs = bpCount + sugarCount + foodCount + medCount;
+  const currentPoints = rewards.total_points;
   const existingMilestones = await MilestoneReward.find({ patient_id: patientId }).lean();
 
-  const milestoneResults: { key: string; title: string; description: string; required_logs: number; current_logs: number; unlocked: boolean; unlocked_at?: string; claimed: boolean; claimed_at?: string; icon: string }[] = [];
+  const milestoneResults: { key: string; title: string; description: string; required_points: number; current_points: number; unlocked: boolean; unlocked_at?: string; claimed: boolean; claimed_at?: string; coupon_code?: string; icon: string }[] = [];
   for (const m of MILESTONE_DEFINITIONS) {
     const existing = existingMilestones.find((e: any) => e.milestone_key === m.key);
-    const unlocked = existing != null || totalLogs >= m.required_logs;
-    if (totalLogs >= m.required_logs && !existing) {
+    const unlocked = existing != null || currentPoints >= m.required_points;
+    if (currentPoints >= m.required_points && !existing) {
       try {
         await MilestoneReward.create({ patient_id: patientId, milestone_key: m.key });
       } catch (err: any) {
@@ -1269,21 +1311,22 @@ router.get("/me/gamification", requireAuth, async (req, res) => {
       key: m.key,
       title: m.title,
       description: m.description,
-      required_logs: m.required_logs,
-      current_logs: totalLogs,
+      required_points: m.required_points,
+      current_points: currentPoints,
       unlocked,
-      unlocked_at: (doc as any)?.unlocked_at?.toISOString?.(),
+      unlocked_at: (doc as any)?.unlocked_at?.toISOString?.() || (doc as any)?.created_at?.toISOString?.(),
       claimed: (doc as any)?.claimed ?? false,
       claimed_at: (doc as any)?.claimed_at?.toISOString?.(),
+      coupon_code: (doc as any)?.coupon_code,
       icon: m.icon,
     });
   }
 
   // Persist gamification snapshot to DB
+  const totalLogs = bpCount + sugarCount + foodCount + medCount;
   const gamUpdate = {
     current_streak: streak_days,
     last_log_date: dates.length > 0 ? dates[0] : undefined,
-    total_points: rewards.total_points,
     points_bp: rewards.points_breakdown.blood_pressure,
     points_sugar: rewards.points_breakdown.blood_sugar,
     points_food: rewards.points_breakdown.food,
@@ -1302,13 +1345,16 @@ router.get("/me/gamification", requireAuth, async (req, res) => {
     { upsert: true, new: true }
   );
 
+  const gamDoc = await PatientGamification.findOne({ patient_id: patientId }).select("total_points").lean();
+  const trueTotalPoints = gamDoc ? (gamDoc as any).total_points : rewards.total_points;
+
   res.json({
     streak_days,
     longest_streak: streak_days,
     badges,
     level,
     level_label,
-    total_points: rewards.total_points,
+    total_points: trueTotalPoints,
     points_breakdown: rewards.points_breakdown,
     weekly_challenges,
     milestones: milestoneResults,
@@ -1322,13 +1368,33 @@ router.post("/me/milestones/:key/claim", requireAuth, async (req, res) => {
   if (!link) return res.status(404).json({ error: "Patient record not linked to your account" });
   const patientId = link.patient_id;
   const key = req.params.key;
-  const milestone = await MilestoneReward.findOne({ patient_id: patientId, milestone_key: key });
-  if (!milestone) return res.status(404).json({ error: "Milestone not unlocked yet" });
+
+  const milestoneDef = MILESTONE_DEFINITIONS.find(m => m.key === key);
+  if (!milestoneDef) return res.status(404).json({ error: "Milestone definition not found" });
+  if (key === "gold") return res.status(400).json({ error: "Gold tier is disabled for the pilot" });
+
+  const gam = await PatientGamification.findOne({ patient_id: patientId });
+  const currentPoints = gam ? gam.total_points : 0;
+
+  if (currentPoints < milestoneDef.required_points) {
+    return res.status(400).json({ error: "Milestone not unlocked yet (insufficient points)" });
+  }
+
+  let milestone = await MilestoneReward.findOne({ patient_id: patientId, milestone_key: key });
+  if (!milestone) {
+    milestone = await MilestoneReward.create({ patient_id: patientId, milestone_key: key });
+  }
   if ((milestone as any).claimed) return res.status(400).json({ error: "Already claimed" });
+  
+  const couponPrefix = key === "bronze" ? "BRONZE50-" : key === "silver" ? "SILVERFREE-" : "REWARD-";
+  const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const couponCode = `${couponPrefix}${randomStr}`;
+
   (milestone as any).claimed = true;
   (milestone as any).claimed_at = new Date();
+  (milestone as any).coupon_code = couponCode;
   await milestone.save();
-  res.json({ success: true, claimed_at: (milestone as any).claimed_at.toISOString() });
+  res.json({ success: true, claimed_at: (milestone as any).claimed_at.toISOString(), coupon_code: couponCode });
 });
 
 router.get("/me/rewards", requireAuth, async (req, res) => {
@@ -1484,7 +1550,7 @@ For Indian foods use common serving sizes. Always return valid JSON only.`;
   await updateGamificationState(link.patient_id, "food", filterFood);
   // Email: food logged
   try {
-    const authU = await AuthUser.findById((req as AuthRequest).user.id).select("email full_name").lean();
+    const authU = await AuthUser.findOne({ user_id: (req as AuthRequest).user.id }).select("email full_name").lean();
     if (authU && (authU as any).email) {
       sendFoodLoggedEmail((authU as any).email, (authU as any).full_name || "there", req.body?.meal_type || "Meal", rawNotes || "", (req as AuthRequest).user.id).catch(() => {});
     }
@@ -1597,7 +1663,7 @@ router.post("/me/medication-log", requireAuth, async (req, res) => {
   await updateGamificationState(link.patient_id, "medication", filterMed);
   // Email: medication logged
   try {
-    const authU = await AuthUser.findById((req as AuthRequest).user.id).select("email full_name").lean();
+    const authU = await AuthUser.findOne({ user_id: (req as AuthRequest).user.id }).select("email full_name").lean();
     if (authU && (authU as any).email) {
       sendMedicationLoggedEmail((authU as any).email, (authU as any).full_name || "there", req.body?.medication_name || "Medication", taken, (req as AuthRequest).user.id).catch(() => {});
     }
@@ -1896,13 +1962,33 @@ router.get("/me/accountability", requireAuth, async (req, res) => {
     doctor_name = (profile as { full_name?: string })?.full_name || null;
   }
   const connections = await FamilyConnection.find({ patient_user_id: userId }).lean();
-  const family_connections = (connections as any[]).map((c) => ({
-    id: c._id?.toString(),
-    relationship: c.relationship,
-    invite_email: c.invite_email,
-    status: c.status,
-    family_user_id: c.family_user_id || null,
-  }));
+  
+  // Fetch profiles and emails for linked family connections
+  const familyUserIds = connections.map((c: any) => c.family_user_id).filter(Boolean);
+  const [familyProfiles, familyAuthUsers] = await Promise.all([
+    Profile.find({ user_id: { $in: familyUserIds } }).select("user_id phone full_name").lean(),
+    AuthUser.find({ user_id: { $in: familyUserIds } }).select("user_id email").lean(),
+  ]);
+  const profileMap = new Map(familyProfiles.map((p: any) => [p.user_id, p]));
+  const emailMap = new Map(familyAuthUsers.map((u: any) => [u.user_id, u.email]));
+
+  const family_connections = (connections as any[]).map((c) => {
+    const prof = c.family_user_id ? profileMap.get(c.family_user_id) : null;
+    const email = c.family_user_id ? emailMap.get(c.family_user_id) : null;
+    const resolvedPhone = c.invite_phone || (prof as any)?.phone || null;
+    return {
+      id: c._id?.toString(),
+      relationship: c.relationship,
+      invite_email: c.invite_email || email || null,
+      invite_phone: resolvedPhone,
+      phone_number: resolvedPhone,
+      status: c.status,
+      family_user_id: c.family_user_id || null,
+      access_vitals: c.access_vitals ?? true,
+      access_chat: c.access_chat ?? false,
+      access_meds: c.access_meds ?? true,
+    };
+  });
   const patientIds = link?.patient_ids ?? [];
   const doctor_messages: { id: string; message: string; created_at: string; doctor_name?: string }[] = [];
   if (patientIds.length > 0) {
@@ -1951,15 +2037,32 @@ router.get("/me/doctor-messages", requireAuth, async (req, res) => {
 router.get("/me/family-connections", requireAuth, async (req, res) => {
   const userId = (req as AuthRequest).user.id;
   const list = await FamilyConnection.find({ patient_user_id: userId }).sort({ created_at: -1 }).lean();
+  
+  // Populate details dynamically
+  const familyUserIds = list.map((c: any) => c.family_user_id).filter(Boolean);
+  const [familyProfiles, familyAuthUsers] = await Promise.all([
+    Profile.find({ user_id: { $in: familyUserIds } }).select("user_id phone full_name").lean(),
+    AuthUser.find({ user_id: { $in: familyUserIds } }).select("user_id email").lean(),
+  ]);
+  const profileMap = new Map(familyProfiles.map((p: any) => [p.user_id, p]));
+  const emailMap = new Map(familyAuthUsers.map((u: any) => [u.user_id, u.email]));
+
   res.json(
-    list.map((d: any) => ({
-      id: d._id?.toString(),
-      relationship: d.relationship,
-      invite_email: d.invite_email,
-      status: d.status,
-      family_user_id: d.family_user_id || null,
-      created_at: d.created_at?.toISOString?.() ?? new Date().toISOString(),
-    }))
+    list.map((d: any) => {
+      const prof = d.family_user_id ? profileMap.get(d.family_user_id) : null;
+      const email = d.family_user_id ? emailMap.get(d.family_user_id) : null;
+      const resolvedPhone = d.invite_phone || (prof as any)?.phone || null;
+      return {
+        id: d._id?.toString(),
+        relationship: d.relationship,
+        invite_email: d.invite_email || email || null,
+        invite_phone: resolvedPhone,
+        phone_number: resolvedPhone,
+        status: d.status,
+        family_user_id: d.family_user_id || null,
+        created_at: d.created_at?.toISOString?.() ?? new Date().toISOString(),
+      };
+    })
   );
 });
 
@@ -1967,32 +2070,109 @@ router.post("/me/family-connections", requireAuth, async (req, res) => {
   const userId = (req as AuthRequest).user.id;
   const link = await getPatientForCurrentUser(req);
   if (!link) return res.status(404).json({ error: "Patient record not linked" });
-  const { invite_email, relationship } = req.body as { invite_email?: string; relationship?: string };
+  
+  const { invite_email, invite_phone, relationship, access_vitals, access_chat, access_meds } = req.body as { invite_email?: string; invite_phone?: string; relationship?: string; access_vitals?: boolean; access_chat?: boolean; access_meds?: boolean };
+  
   const email = invite_email ? String(invite_email).trim().toLowerCase() : "";
-  if (!email) return res.status(400).json({ error: "invite_email required" });
+  const phone = invite_phone ? String(invite_phone).trim() : "";
+  
+  if (!email && !phone) {
+    return res.status(400).json({ error: "invite_email or invite_phone required" });
+  }
+
   const rel = relationship === "son" || relationship === "daughter" || relationship === "spouse" ? relationship : "other";
-  const existing = await FamilyConnection.findOne({ patient_user_id: userId, invite_email: email }).lean();
-  if (existing) return res.status(400).json({ error: "Already invited this email" });
+
+  if (email) {
+    const existing = await FamilyConnection.findOne({ patient_user_id: userId, invite_email: email }).lean();
+    if (existing) return res.status(400).json({ error: "Already invited this email" });
+  }
+  if (phone) {
+    const existing = await FamilyConnection.findOne({ patient_user_id: userId, invite_phone: phone }).lean();
+    if (existing) return res.status(400).json({ error: "Already invited this phone number" });
+  }
+
+  // Look up if a matching user is already registered in DB
+  let familyUserId: string | null = null;
+  let status = "pending";
+
+  if (email) {
+    const authU = await AuthUser.findOne({ email }).select("user_id").lean();
+    if (authU) {
+      familyUserId = (authU as any).user_id;
+      status = "active";
+    }
+  }
+
+  if (!familyUserId && phone) {
+    const prof = await Profile.findOne({ phone }).select("user_id").lean();
+    if (prof) {
+      familyUserId = (prof as any).user_id;
+      status = "active";
+    }
+  }
+
   const doc = await FamilyConnection.create({
     patient_user_id: userId,
-    invite_email: email,
+    family_user_id: familyUserId,
+    invite_email: email || null,
+    invite_phone: phone || null,
     relationship: rel,
-    status: "pending",
+    status,
+    access_vitals: access_vitals ?? true,
+    access_chat: access_chat ?? false,
+    access_meds: access_meds ?? true,
   });
+
   res.status(201).json({
     id: doc._id?.toString(),
     relationship: rel,
-    invite_email: email,
-    status: "pending",
-    family_user_id: null,
+    invite_email: email || null,
+    invite_phone: phone || null,
+    phone_number: phone || null,
+    status,
+    family_user_id: familyUserId,
+    access_vitals: doc.access_vitals,
+    access_chat: doc.access_chat,
+    access_meds: doc.access_meds,
   });
 
-  // Send family invitation email (fire-and-forget)
-  try {
-    const prof = await Profile.findOne({ user_id: userId }).select("full_name").lean();
-    const patient = await Patient.findOne({ patient_user_id: userId }).select("full_name").lean();
-    sendFamilyInvitationEmail(email, (patient as any)?.full_name || "a patient", (prof as any)?.full_name || "Someone").catch(() => {});
-  } catch {}
+  // If invited by email, send family invitation email (fire-and-forget)
+  if (email) {
+    try {
+      const prof = await Profile.findOne({ user_id: userId }).select("full_name").lean();
+      const patient = await Patient.findOne({ patient_user_id: userId }).select("full_name").lean();
+      sendFamilyInvitationEmail(email, (patient as any)?.full_name || "a patient", (prof as any)?.full_name || "Someone").catch(() => {});
+    } catch {}
+  }
+
+  // If invited by phone, send WhatsApp invitation text (fire-and-forget)
+  if (phone) {
+    try {
+      const prof = await Profile.findOne({ user_id: userId }).select("full_name").lean();
+      const patient = await Patient.findOne({ patient_user_id: userId }).select("full_name").lean();
+      const senderName = (prof as any)?.full_name || (patient as any)?.full_name || "A patient";
+      const message = `Hello! You've been invited by ${senderName} on Mediimate to link accounts as a Family member. Click http://localhost:8082 to register and view their daily health logs.`;
+      whatsapp.sendText(phone, message).catch(() => {});
+    } catch {}
+  }
+});
+
+router.patch("/me/family-connections/:id", requireAuth, async (req, res) => {
+  const userId = (req as AuthRequest).user.id;
+  const { access_vitals, access_chat, access_meds } = req.body;
+  const updateFields: any = {};
+  if (access_vitals !== undefined) updateFields.access_vitals = access_vitals;
+  if (access_chat !== undefined) updateFields.access_chat = access_chat;
+  if (access_meds !== undefined) updateFields.access_meds = access_meds;
+  
+  const updated = await FamilyConnection.findOneAndUpdate(
+    { _id: req.params.id, patient_user_id: userId },
+    { $set: updateFields },
+    { new: true }
+  ).lean();
+  
+  if (!updated) return res.status(404).json({ error: "Not found" });
+  res.json(updated);
 });
 
 router.delete("/me/family-connections/:id", requireAuth, async (req, res) => {
@@ -2056,8 +2236,8 @@ router.post("/patients/:id/message", requireAuth, async (req, res) => {
     const patientUserId = (patientRec as any)?.patient_user_id;
     if (patientUserId) {
       const [patientAuth, doctorAuth] = await Promise.all([
-        AuthUser.findById(patientUserId).select("email full_name").lean(),
-        AuthUser.findById(doctorId).select("full_name").lean(),
+        AuthUser.findOne({ user_id: patientUserId }).select("email full_name").lean(),
+        AuthUser.findOne({ user_id: doctorId }).select("full_name").lean(),
       ]);
       if (patientAuth && (patientAuth as any).email) {
         sendDoctorMessageEmail(
@@ -2170,7 +2350,7 @@ router.post("/internal/send-routine-pushes", async (req, res) => {
       const defaultSugar = "100";
       // Helper to get email for routine email reminders
       const getUserEmail = async (uid: string) => {
-        const u = await AuthUser.findById(uid).select("email full_name").lean();
+        const u = await AuthUser.findOne({ user_id: uid }).select("email full_name").lean();
         return u ? { email: (u as any).email, name: (u as any).full_name || "there" } : null;
       };
 
@@ -2394,7 +2574,7 @@ router.post("/internal/process-reminder-escalations", async (req, res) => {
       const triggerLabel = triggerType === "blood_pressure" ? "BP" : triggerType === "blood_sugar" ? "blood sugar" : "medication";
       // Helper: get email for escalation emails
       const escUserEmail = async () => {
-        const u = await AuthUser.findById(userId).select("email full_name").lean();
+        const u = await AuthUser.findOne({ user_id: userId }).select("email full_name").lean();
         return u ? { email: (u as any).email, name: (u as any).full_name || p.full_name || "there" } : null;
       };
 
@@ -2483,6 +2663,7 @@ router.post("/internal/process-reminder-escalations", async (req, res) => {
       }
       if (day >= 5 && !e.day5_sent_at) {
         const emergencyContact = p.emergency_contact || "Not set";
+        const alertType = triggerType === "medication" ? "missed_medication" : "low_adherence";
         const alert = await Alert.create({
           doctor_id,
           patient_id,
@@ -2491,14 +2672,14 @@ router.post("/internal/process-reminder-escalations", async (req, res) => {
           severity: "medium",
           status: "open",
           related_type: "reminder_escalation",
-          alert_type: "reminder_escalation",
+          alert_type: alertType,
         });
         // Email: Day 5 escalation to patient + doctor alert
         const eu5 = await escUserEmail();
         if (eu5?.email) sendEscalationReminderEmail(eu5.email, eu5.name, triggerType, 5, userId).catch(() => {});
         // Email: alert doctor about missed patient
         try {
-          const doctorAuth = await AuthUser.findById(doctor_id).select("email full_name").lean();
+          const doctorAuth = await AuthUser.findOne({ user_id: doctor_id }).select("email full_name").lean();
           if (doctorAuth && (doctorAuth as any).email) {
             sendDoctorPatientMissedAlertEmail(
               (doctorAuth as any).email,
@@ -2530,7 +2711,7 @@ router.post("/internal/send-daily-summary-emails", async (req, res) => {
     const allPatients = await Patient.find({}).select("_id patient_user_id full_name").lean();
     for (const pat of allPatients as any[]) {
       if (!pat.patient_user_id) continue;
-      const authU = await AuthUser.findById(pat.patient_user_id).select("email full_name").lean();
+      const authU = await AuthUser.findOne({ user_id: pat.patient_user_id }).select("email full_name").lean();
       if (!authU || !(authU as any).email) continue;
       const today = new Date();
       const startOfDay = new Date(today);
@@ -2598,7 +2779,7 @@ router.post("/internal/send-weekly-compliance-emails", async (req, res) => {
     for (const docId of Object.keys(doctorMap)) {
       const info = doctorMap[docId];
       if (info.patients.length === 0) continue;
-      const doctorAuth = await AuthUser.findById(info.doctorUserId).select("email full_name").lean();
+      const doctorAuth = await AuthUser.findOne({ user_id: info.doctorUserId }).select("email full_name").lean();
       if (!doctorAuth || !(doctorAuth as any).email) continue;
       sendWeeklyComplianceEmail(
         (doctorAuth as any).email,
@@ -2633,8 +2814,8 @@ router.post("/internal/send-appointment-reminders", async (req, res) => {
       const patientUserId = (patient as any).patient_user_id;
       if (!patientUserId) continue;
       const [patientAuth, doctorAuth] = await Promise.all([
-        AuthUser.findById(patientUserId).select("email full_name").lean(),
-        AuthUser.findById(apt.doctor_id).select("full_name").lean(),
+        AuthUser.findOne({ user_id: patientUserId }).select("email full_name").lean(),
+        AuthUser.findOne({ user_id: apt.doctor_id }).select("full_name").lean(),
       ]);
       if (patientAuth && (patientAuth as any).email) {
         const dateStr = new Date(apt.scheduled_at).toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -2703,9 +2884,93 @@ router.post("/me/meal-image-upload", requireAuth, mealUpload.single("file"), asy
   res.json({ path: `meals/${file.filename}` });
 });
 
+// ---------- Alerts Synchronization Helpers ----------
+async function syncPatientStatus(patientId: string) {
+  try {
+    const hasCritical = await Alert.exists({ patient_id: patientId, status: "open", severity: "critical" });
+    const status = hasCritical ? "at_risk" : "active";
+    await Patient.updateOne({ _id: patientId }, { $set: { status } });
+  } catch (err) {
+    console.error("syncPatientStatus error:", err);
+  }
+}
+
+async function runAlertScanForDoctor(userId: string): Promise<number> {
+  let created = 0;
+  // Get all active linked patient user IDs
+  const links = await PatientDoctorLink.find({ doctor_user_id: userId, status: "active" }).select("patient_user_id").lean();
+  const linkedPatientUserIds = [...new Set((links as any[]).map((l) => l.patient_user_id))];
+
+  // Query patients that the doctor owns OR who are linked
+  const orConditions: any[] = [{ doctor_id: userId }];
+  if (linkedPatientUserIds.length > 0) {
+    orConditions.push({ patient_user_id: { $in: linkedPatientUserIds } });
+  }
+  const patients = await Patient.find({ $or: orConditions }).lean();
+  const patientIds = patients.map((p: any) => p._id?.toString());
+  const patientMap: Record<string, string> = {};
+  patients.forEach((p: any) => { patientMap[p._id?.toString()] = (p as any).full_name || "Patient"; });
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+
+  // 1. Abnormal vitals
+  const recentVitals = await Vital.find({ patient_id: { $in: patientIds }, recorded_at: { $gte: sevenDaysAgo } }).lean();
+  for (const v of recentVitals as any[]) {
+    let isAbnormal = false;
+    let detail = "";
+    if (v.vital_type === "blood_pressure" && v.value_text) {
+      const parts = v.value_text.split("/").map(Number);
+      if (parts.length === 2 && (parts[0] > 140 || parts[0] < 90 || parts[1] > 90 || parts[1] < 60)) { isAbnormal = true; detail = `BP ${v.value_text} mmHg`; }
+    } else if (v.vital_type === "heart_rate" && v.value_numeric && (v.value_numeric > 100 || v.value_numeric < 50)) { isAbnormal = true; detail = `HR ${v.value_numeric} bpm`; }
+    else if (v.vital_type === "blood_sugar" && v.value_numeric && (v.value_numeric > 200 || v.value_numeric < 70)) { isAbnormal = true; detail = `Blood sugar ${v.value_numeric} mg/dL`; }
+    else if (v.vital_type === "spo2" && v.value_numeric && v.value_numeric < 92) { isAbnormal = true; detail = `SpO2 ${v.value_numeric}%`; }
+    else if (v.vital_type === "temperature" && v.value_numeric && (v.value_numeric > 100.4 || v.value_numeric < 95)) { isAbnormal = true; detail = `Temp ${v.value_numeric}°F`; }
+    if (isAbnormal) {
+      const exists = await Alert.findOne({ doctor_id: userId, patient_id: v.patient_id, alert_type: "abnormal_vital", related_id: v._id?.toString() }).lean();
+      if (!exists) {
+        await Alert.create({ doctor_id: userId, patient_id: v.patient_id, alert_type: "abnormal_vital", severity: "critical", title: `Abnormal vital: ${detail}`, description: `${patientMap[v.patient_id] || "Patient"} recorded ${detail}.`, status: "open", related_id: v._id?.toString(), related_type: "vital" });
+        await syncPatientStatus(v.patient_id);
+        created++;
+      }
+    }
+  }
+
+  // 2. No-show appointments
+  const noShows = await Appointment.find({ doctor_id: userId, status: "no_show", scheduled_at: { $gte: sevenDaysAgo } }).lean();
+  for (const a of noShows as any[]) {
+    const exists = await Alert.findOne({ doctor_id: userId, patient_id: a.patient_id, alert_type: "no_show", related_id: a._id?.toString() }).lean();
+    if (!exists) {
+      await Alert.create({ doctor_id: userId, patient_id: a.patient_id, alert_type: "no_show", severity: "warning", title: `No-show: ${a.title}`, description: `${patientMap[a.patient_id] || "Patient"} missed "${a.title}".`, status: "open", related_id: a._id?.toString(), related_type: "appointment" });
+      created++;
+    }
+  }
+
+  // 3. Abnormal lab results
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000);
+  const abnormalLabs = await LabResult.find({ patient_id: { $in: patientIds }, status: { $in: ["abnormal", "critical"] }, tested_at: { $gte: fourteenDaysAgo } }).lean();
+  for (const lab of abnormalLabs as any[]) {
+    const exists = await Alert.findOne({ doctor_id: userId, patient_id: lab.patient_id, related_id: lab._id?.toString() }).lean();
+    if (!exists) {
+      const isCritical = lab.status === "critical";
+      await Alert.create({ doctor_id: userId, patient_id: lab.patient_id, alert_type: "abnormal_vital", severity: isCritical ? "critical" : "warning", title: `Abnormal lab: ${lab.test_name}`, description: `${patientMap[lab.patient_id] || "Patient"} — ${lab.test_name}: ${lab.result_value} ${lab.unit || ""}.`, status: "open", related_id: lab._id?.toString(), related_type: "lab_result" });
+      if (isCritical) {
+        await syncPatientStatus(lab.patient_id);
+      }
+      created++;
+    }
+  }
+
+  return created;
+}
+
 // ---------- Alerts ----------
 router.get("/alerts", requireAuth, async (req, res) => {
   const userId = (req as AuthRequest).user.id;
+  try {
+    await runAlertScanForDoctor(userId);
+  } catch (err) {
+    console.error("Proactive alert scan failed:", err);
+  }
   const q = req.query as { patient_id?: string; status?: string; count?: string };
   let filter: Record<string, string> = { doctor_id: userId };
   if (q.patient_id) {
@@ -2722,6 +2987,16 @@ router.get("/alerts", requireAuth, async (req, res) => {
   res.json(list.map((d: any) => ({ ...d, id: d._id?.toString(), _id: undefined, __v: undefined })));
 });
 
+router.post("/alerts/scan", requireAuth, async (req, res) => {
+  const userId = (req as AuthRequest).user.id;
+  try {
+    const created = await runAlertScanForDoctor(userId);
+    res.json({ scanned: true, created });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 router.patch("/alerts/:id", requireAuth, async (req, res) => {
   const updated = await Alert.findOneAndUpdate(
     { _id: req.params.id, doctor_id: (req as AuthRequest).user.id },
@@ -2729,7 +3004,33 @@ router.patch("/alerts/:id", requireAuth, async (req, res) => {
     { new: true }
   ).lean();
   if (!updated) return res.status(404).json({ error: "Not found" });
+  if (req.body.status) {
+    await syncPatientStatus((updated as any).patient_id);
+  }
   res.json({ ...updated, id: updated._id?.toString(), _id: undefined, __v: undefined });
+});
+
+// ---------- Clinical Feedback (Doctor -> Patient) ----------
+router.post("/clinical_feedback", requireAuth, async (req, res) => {
+  const userId = (req as AuthRequest).user.id;
+  const { patient_id, message, rating } = req.body;
+  if (!patient_id || !message) return res.status(400).json({ error: "patient_id and message required" });
+  const canAccess = await doctorCanAccessPatient(userId, patient_id);
+  if (!canAccess) return res.status(403).json({ error: "Not linked to this patient" });
+  const patient = await Patient.findById(patient_id).select("patient_user_id full_name").lean() as any;
+  if (!patient?.patient_user_id) return res.status(404).json({ error: "Patient not found" });
+  const profile = await Profile.findOne({ user_id: userId }).select("full_name").lean() as any;
+  const doctorName = profile?.full_name || "Your Doctor";
+  await Notification.create({
+    user_id: patient.patient_user_id,
+    title: `Clinical feedback from Dr. ${doctorName}`,
+    message: String(message).trim(),
+    type: "info",
+    category: "feedback",
+    related_id: patient_id,
+    related_type: "clinical_feedback",
+  });
+  res.json({ sent: true });
 });
 
 // ---------- Appointments ----------
@@ -2771,6 +3072,35 @@ router.patch("/appointments/:id", requireAuth, async (req, res) => {
     { new: true }
   ).lean();
   if (!updated) return res.status(404).json({ error: "Not found" });
+
+  // When doctor accepts / schedules a requested appointment
+  if (req.body.status === "scheduled" && (prev as any).status === "requested") {
+    try {
+      const patientDoc = await Patient.findOne({ _id: (updated as any).patient_id }).select("patient_user_id").lean();
+      if (patientDoc && (patientDoc as any).patient_user_id) {
+        const pAuth = await AuthUser.findOne({ user_id: (patientDoc as any).patient_user_id }).select("email full_name").lean();
+        if (pAuth && (pAuth as any).email) {
+          const dateStr = new Date((updated as any).scheduled_at).toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+          sendAppointmentBookedEmail((pAuth as any).email, (pAuth as any).full_name || "there", (updated as any).title, dateStr, (patientDoc as any).patient_user_id).catch(() => {});
+        }
+      }
+    } catch {}
+  }
+
+  // When doctor declines / cancels a requested appointment
+  if (req.body.status === "cancelled" && (prev as any).status === "requested") {
+    try {
+      const patientDoc = await Patient.findOne({ _id: (updated as any).patient_id }).select("patient_user_id").lean();
+      if (patientDoc && (patientDoc as any).patient_user_id) {
+        const pAuth = await AuthUser.findOne({ user_id: (patientDoc as any).patient_user_id }).select("email full_name").lean();
+        if (pAuth && (pAuth as any).email) {
+          const dateStr = new Date((updated as any).scheduled_at).toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+          sendAppointmentDeclinedEmail((pAuth as any).email, (pAuth as any).full_name || "there", (updated as any).title, dateStr, (patientDoc as any).patient_user_id).catch(() => {});
+        }
+      }
+    } catch {}
+  }
+
   // When doctor marks appointment completed, create feedback request and notify patient
   if (req.body.status === "completed" && (prev as any).status !== "completed") {
     const patientDoc = await Patient.findOne({ _id: (updated as any).patient_id }).select("patient_user_id full_name").lean();
@@ -2800,8 +3130,8 @@ router.patch("/appointments/:id", requireAuth, async (req, res) => {
       // Email: appointment completed
       try {
         const [patientAuth, doctorAuth] = await Promise.all([
-          AuthUser.findById(patientUserId).select("email full_name").lean(),
-          AuthUser.findById((req as AuthRequest).user.id).select("full_name").lean(),
+          AuthUser.findOne({ user_id: patientUserId }).select("email full_name").lean(),
+          AuthUser.findOne({ user_id: (req as AuthRequest).user.id }).select("full_name").lean(),
         ]);
         if (patientAuth && (patientAuth as any).email) {
           sendAppointmentCompletedEmail(
@@ -3491,7 +3821,65 @@ router.get("/food_logs", requireAuth, async (req, res) => {
 });
 
 router.post("/food_logs", requireAuth, async (req, res) => {
-  const body = { ...req.body, doctor_id: (req as AuthRequest).user.id };
+  const doctorId = (req as AuthRequest).user.id;
+  const { patient_id, meal_type, raw_message, source, notes } = req.body;
+  if (!patient_id) return res.status(400).json({ error: "patient_id required" });
+
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const descriptionText = (raw_message || notes || "").trim();
+  let food_items: any[] = [];
+  let total_calories: number | undefined;
+  let total_protein: number | undefined;
+  let total_carbs: number | undefined;
+  let total_fat: number | undefined;
+
+  const needsAI = geminiKey && descriptionText;
+
+  if (needsAI) {
+    const systemPrompt = `You are a nutrition parser. Analyze the meal and extract food items with accurate nutritional values.
+Return ONLY valid JSON: { "food_items": [{ "name": "string", "quantity": number, "unit": "string", "calories": number, "protein": number, "carbs": number, "fat": number }] }
+For Indian foods use common serving sizes. Always return valid JSON only.`;
+
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: "user", parts: [{ text: `Meal type: ${meal_type || "other"}\nDescription: ${descriptionText}` }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
+          }),
+        }
+      );
+      if (geminiRes.ok) {
+        const aiResult = await geminiRes.json();
+        const content = aiResult.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
+        try {
+          const parsed = JSON.parse(jsonMatch[1]!.trim());
+          if (Array.isArray(parsed.food_items) && parsed.food_items.length > 0) {
+            food_items = parsed.food_items;
+          }
+        } catch { /* ignore parse errors */ }
+      }
+    } catch { /* AI failures are non-blocking */ }
+  }
+
+  if (food_items.length > 0) {
+    total_calories = food_items.reduce((s, i) => s + (i.calories || 0), 0);
+    total_protein  = food_items.reduce((s, i) => s + (i.protein  || 0), 0);
+    total_carbs    = food_items.reduce((s, i) => s + (i.carbs    || 0), 0);
+    total_fat      = food_items.reduce((s, i) => s + (i.fat      || 0), 0);
+  }
+
+  const body = {
+    ...req.body,
+    doctor_id: doctorId,
+    food_items: food_items.length > 0 ? food_items : (req.body?.food_items ?? []),
+    ...(total_calories !== undefined && { total_calories, total_protein, total_carbs, total_fat }),
+  };
   const doc = await FoodLog.create(body);
   res.status(201).json(doc.toJSON());
 });
@@ -3590,6 +3978,30 @@ router.get("/lab_reports/:id", requireAuth, async (req, res) => {
     report: { ...r, id: r._id?.toString(), _id: undefined, __v: undefined },
     results: results.map((d: any) => ({ ...d, id: d._id?.toString(), _id: undefined, __v: undefined })),
   });
+});
+
+router.get("/lab_reports/:id/file", requireAuth, async (req, res) => {
+  const report = await LabReport.findById(req.params.id).lean();
+  if (!report) return res.status(404).json({ error: "Not found" });
+  const r = report as any;
+  const userId = (req as AuthRequest).user.id;
+  const patient = await Patient.findOne({ _id: r.patient_id }).select("doctor_id patient_user_id").lean();
+  if (!patient) return res.status(404).json({ error: "Not found" });
+  const p = patient as { doctor_id: string; patient_user_id?: string };
+  let canAccess = r.doctor_id === userId || p.patient_user_id === userId || r.uploaded_by === userId;
+  if (!canAccess && p.patient_user_id) {
+    const link = await PatientDoctorLink.findOne({ doctor_user_id: userId, patient_user_id: p.patient_user_id, status: "active" }).lean();
+    if (link) {
+      canAccess = true;
+    } else {
+      const fam = await FamilyConnection.findOne({ family_user_id: userId, patient_user_id: p.patient_user_id, status: "active" }).lean();
+      canAccess = !!fam;
+    }
+  }
+  if (!canAccess) return res.status(403).json({ error: "Forbidden" });
+  const filePath = path.join(UPLOAD_DIR, r.file_path);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found" });
+  res.sendFile(filePath, { headers: { "Content-Disposition": `inline; filename="${encodeURIComponent(r.file_name || "report")}"` } });
 });
 
 router.post("/lab_results", requireAuth, async (req, res) => {
@@ -3884,10 +4296,15 @@ router.get("/patient_documents/:id/file", requireAuth, async (req, res) => {
   const patient = await Patient.findOne({ _id: d.patient_id }).select("doctor_id patient_user_id").lean();
   if (!patient) return res.status(404).json({ error: "Not found" });
   const p = patient as { doctor_id: string; patient_user_id?: string };
-  let canAccess = d.doctor_id === userId || p.patient_user_id === userId;
+  let canAccess = d.doctor_id === userId || p.patient_user_id === userId || d.uploaded_by === userId;
   if (!canAccess && p.patient_user_id) {
     const link = await PatientDoctorLink.findOne({ doctor_user_id: userId, patient_user_id: p.patient_user_id, status: "active" }).lean();
-    canAccess = !!link;
+    if (link) {
+      canAccess = true;
+    } else {
+      const fam = await FamilyConnection.findOne({ family_user_id: userId, patient_user_id: p.patient_user_id, status: "active" }).lean();
+      canAccess = !!fam;
+    }
   }
   if (!canAccess) return res.status(403).json({ error: "Forbidden" });
   const filePath = path.join(UPLOAD_DIR, d.file_path);
@@ -3961,34 +4378,23 @@ router.get("/patients", requireAuth, async (req, res) => {
   let filter: PatientFilter = {};
   const asClinicId = await getClinicIdForUser(userId);
   const clinicId = q.clinic_id || (asClinicId ? asClinicId : null);
+  
   if (clinicId) {
     const ok = await canActForClinic(userId, clinicId);
     if (!ok) return res.status(403).json({ error: "Not allowed" });
-    const members = await ClinicMember.find({ clinic_id: clinicId }).select("user_id").lean();
-    const doctorIds = [...new Set((members as { user_id: string }[]).map((m) => m.user_id))];
-    if (doctorIds.length === 0) return res.json([]);
-    filter.doctor_id = { $in: doctorIds };
-  } else {
-    // Collect all doctor IDs this user can see patients for:
-    // 1. Their own patients (doctor_id = userId)
-    // 2. Linked patients (via PatientDoctorLink)
-    // 3. Patients from all clinics the doctor is a member of (via ClinicMember)
-    const allDoctorIds = new Set<string>([userId]);
-    const memberships = await ClinicMember.find({ user_id: userId, role: { $in: ["owner", "admin", "doctor"] } }).select("clinic_id").lean();
-    if (memberships.length) {
-      const memberClinicIds = [...new Set((memberships as any[]).map((m) => m.clinic_id))];
-      const clinicMembers = await ClinicMember.find({ clinic_id: { $in: memberClinicIds } }).select("user_id").lean();
-      (clinicMembers as any[]).forEach((m) => allDoctorIds.add(m.user_id));
-    }
-    const links = await PatientDoctorLink.find({ doctor_user_id: userId, status: "active" }).select("patient_user_id").lean();
-    const linkedPatientUserIds = [...new Set((links as { patient_user_id: string }[]).map((l) => l.patient_user_id))];
-
-    const orConditions: any[] = [{ doctor_id: { $in: [...allDoctorIds] } }];
-    if (linkedPatientUserIds.length > 0) {
-      orConditions.push({ patient_user_id: { $in: linkedPatientUserIds } });
-    }
-    filter.$or = orConditions;
   }
+
+  // CRITICAL SECURITY FIX:
+  // A doctor may only see a patient if they manually created the patient (doctor_id = userId)
+  // or if the patient explicitly connected to them via vault code (PatientDoctorLink status = "active")
+  const links = await PatientDoctorLink.find({ doctor_user_id: userId, status: "active" }).select("patient_user_id").lean();
+  const linkedPatientUserIds = [...new Set((links as { patient_user_id: string }[]).map((l) => l.patient_user_id))];
+
+  const orConditions: any[] = [{ doctor_id: userId }];
+  if (linkedPatientUserIds.length > 0) {
+    orConditions.push({ patient_user_id: { $in: linkedPatientUserIds } });
+  }
+  filter.$or = orConditions;
   if (q.patient_user_id) filter.patient_user_id = q.patient_user_id;
   if (q.status) filter.status = q.status;
   if (q.count === "true" || q.count === "1") {
@@ -4693,7 +5099,23 @@ router.post("/chat/patient", requireAuth, async (req, res) => {
     const pid = (patient as any)._id.toString();
     contextParts = await buildPatientContext(pid, patient);
   }
-  const systemPrompt = `You are Mediimate AI — a caring health assistant for patients. You have access to the patient's health records below. You are NOT a doctor; recommend consulting their doctor for medical decisions. Be empathetic and concise.\n\n${contextParts || "No patient records found."}\n\nRespond in a friendly, professional tone.`;
+  const todayStr = new Date().toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+  const systemPrompt = `You are Mediimate AI — a caring health assistant for patients. You have access to the patient's health records below. You are NOT a doctor; recommend consulting their doctor for medical decisions. Be empathetic and concise.
+
+TODAY'S DATE: ${todayStr}
+
+=== PATIENT HEALTH RECORDS ===
+${contextParts || "No patient records found."}
+
+=== CRITICAL INSTRUCTIONS ===
+1. ALWAYS prioritize and use the absolute latest/most recent records first when answering any query.
+2. If the user asks about their recent health, vitals, or labs:
+   - If there is recent data from the last 3 days (relative to ${todayStr}), use it directly.
+   - If recent data (from the last 3 days) is NOT present or available for that vital/lab/record in the patient records, you MUST explicitly tell them: 'Latest data is not available'.
+   - After stating that the latest data is not available, you must answer using the historical data (if available) but you MUST explicitly prefix or state in your response: "I'm using historical data of this date [date]" where "[date]" is the exact date of that historical record. For example: "Latest data is not available. I'm using historical data of this date May 10, 2026: your last blood sugar reading was..."
+   - Never use outdated/historical records to answer questions about recent/latest health without explicitly declaring that the latest is not available and quoting the historical record's date.
+
+Respond in a friendly, professional, and empathetic tone.`;
   const geminiContents = (messages || []).map((m: { role: string; content: string }) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content || "" }] }));
   if (geminiContents.length === 0) return res.status(400).json({ error: "No messages provided" });
   const streamRes = await fetch(

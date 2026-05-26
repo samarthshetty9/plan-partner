@@ -62,6 +62,7 @@ const PatientChat = lazy(() => import("./pages/patient/PatientChat"));
 const PatientOverview = lazy(() => import("./pages/patient/PatientOverview"));
 const PatientVitals = lazy(() => import("./pages/patient/PatientVitals"));
 const PatientLabResults = lazy(() => import("./pages/patient/PatientLabResults"));
+const PatientDocumentsResults = lazy(() => import("./pages/patient/PatientDocumentsResults"));
 const PatientDocuments = lazy(() => import("./pages/patient/PatientDocuments"));
 const PatientAppointments = lazy(() => import("./pages/patient/PatientAppointments"));
 const PatientVault = lazy(() => import("./pages/patient/PatientVault"));
@@ -91,6 +92,7 @@ const PatientCarePlan = lazy(() => import("./pages/patient/PatientCarePlan"));
 const PatientCarePlanLeaderboard = lazy(() => import("./pages/patient/PatientCarePlanLeaderboard"));
 const PatientCarePlanChannel = lazy(() => import("./pages/patient/PatientCarePlanChannel"));
 const MarketplacePlanDetail = lazy(() => import("./pages/patient/MarketplacePlanDetail"));
+const PatientFitnessTracking = lazy(() => import("./pages/patient/PatientFitnessTracking"));
 
 const PageFallback = () => (
   <div className="flex items-center justify-center min-h-[40vh]">
@@ -197,11 +199,11 @@ const App = () => (
             <Route path="/patient/connect-doctor" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientConnectDoctor /></PatientLayout></ProtectedRoute>} />
             <Route path="/patient/medications" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientMedications /></PatientLayout></ProtectedRoute>} />
             <Route path="/patient/vitals" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientVitals /></PatientLayout></ProtectedRoute>} />
-            <Route path="/patient/lab-results" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientLabResults /></PatientLayout></ProtectedRoute>} />
-            <Route path="/patient/documents" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientDocuments /></PatientLayout></ProtectedRoute>} />
+            <Route path="/patient/documents-results" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientDocumentsResults /></PatientLayout></ProtectedRoute>} />
             <Route path="/patient/appointments" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientAppointments /></PatientLayout></ProtectedRoute>} />
             <Route path="/patient/feedback" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientFeedback /></PatientLayout></ProtectedRoute>} />
             <Route path="/patient/food-analysis" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientFoodAnalysis /></PatientLayout></ProtectedRoute>} />
+            <Route path="/patient/fitness-tracking" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientFitnessTracking /></PatientLayout></ProtectedRoute>} />
             <Route path="/patient/vault" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientVault /></PatientLayout></ProtectedRoute>} />
             <Route path="/patient/hospitals/find" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientIntentCapture /></PatientLayout></ProtectedRoute>} />
             <Route path="/patient/hospitals" element={<ProtectedRoute allowedRole="patient"><PatientLayout><PatientHospitalDiscovery /></PatientLayout></ProtectedRoute>} />

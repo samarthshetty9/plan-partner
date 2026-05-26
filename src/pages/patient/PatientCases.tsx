@@ -146,9 +146,12 @@ const PatientCases = () => {
     <div className="w-full max-w-full min-w-0 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-heading font-bold text-foreground">
-            My Cases
-          </h1>
+          <div className="flex items-center gap-3">
+            <Briefcase className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-heading font-semibold text-foreground">
+              My Treatment Requests
+            </h1>
+          </div>
           <p className="text-muted-foreground text-sm">
             Track your treatment requests. We'll find the best hospitals for
             you.

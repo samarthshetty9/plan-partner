@@ -27,21 +27,21 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/dashboard/patients", icon: Users, label: "Patients" },
-  { to: "/dashboard/care-plans", icon: ClipboardList, label: "Care Plans" },
-  { to: "/dashboard/enrollments", icon: UserPlus, label: "Enrollments" },
-  { to: "/dashboard/appointments", icon: CalendarDays, label: "Appointments" },
-  { to: "/dashboard/availability", icon: Clock, label: "Availability" },
-  { to: "/dashboard/feedback", icon: Star, label: "Feedback" },
-  { to: "/dashboard/vitals", icon: Activity, label: "Vitals" },
-  { to: "/dashboard/lab-results", icon: FileText, label: "Lab Results" },
-  { to: "/dashboard/documents", icon: Upload, label: "Documents" },
-  { to: "/dashboard/link-requests", icon: Link, label: "Link Requests" },
-  { to: "/dashboard/alerts", icon: AlertTriangle, label: "Alerts" },
-  { to: "/dashboard/vault-access", icon: Shield, label: "Vault Access" },
-  { to: "/dashboard/clinic", icon: Building2, label: "Clinic" },
-  { to: "/dashboard/compliance", icon: ClipboardCheck, label: "Compliance" },
+  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", tooltip: "Overview of your practice" },
+  { to: "/dashboard/patients", icon: Users, label: "Patients", tooltip: "Manage your patient list" },
+  { to: "/dashboard/care-plans", icon: ClipboardList, label: "Care Plans", tooltip: "View and assign care plans" },
+  { to: "/dashboard/enrollments", icon: UserPlus, label: "Enrollments", tooltip: "Patient care plan enrollments" },
+  { to: "/dashboard/appointments", icon: CalendarDays, label: "Appointments", tooltip: "Manage patient appointments" },
+  { to: "/dashboard/availability", icon: Clock, label: "Availability", tooltip: "Set your working hours" },
+  { to: "/dashboard/feedback", icon: Star, label: "Feedback", tooltip: "Patient reviews and feedback" },
+  { to: "/dashboard/vitals", icon: Activity, label: "Vitals", tooltip: "Monitor patient vital signs" },
+  { to: "/dashboard/lab-results", icon: FileText, label: "Lab Results", tooltip: "Review patient lab reports" },
+  { to: "/dashboard/documents", icon: Upload, label: "Documents", tooltip: "Manage medical documents" },
+  { to: "/dashboard/link-requests", icon: Link, label: "Link Requests", tooltip: "Approve patient link requests" },
+  { to: "/dashboard/alerts", icon: AlertTriangle, label: "Alerts", tooltip: "Critical patient notifications" },
+  { to: "/dashboard/vault-access", icon: Shield, label: "Vault Access", tooltip: "Access patient health vaults" },
+  { to: "/dashboard/clinic", icon: Building2, label: "Clinic", tooltip: "Clinic settings and management" },
+  { to: "/dashboard/compliance", icon: ClipboardCheck, label: "Compliance", tooltip: "View patient compliance reports" },
 ];
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
@@ -104,6 +104,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 key={item.to}
                 to={item.to}
                 onClick={() => setSidebarOpen(false)}
+                title={item.tooltip}
                 className={`flex items-center gap-3 min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-medium transition-colors touch-manipulation ${
                   isActive
                     ? "bg-primary/10 text-primary"

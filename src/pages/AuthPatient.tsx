@@ -23,8 +23,8 @@ const AuthPatient = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>;
-  if (user && role) {
-    const to = role === "patient" ? "/patient" : role === "clinic" ? "/clinic" : role === "family" ? "/family" : "/dashboard";
+  if (user && role && (role === "patient" || role === "family")) {
+    const to = role === "patient" ? "/patient" : "/family";
     return <Navigate to={to} replace />;
   }
 

@@ -101,9 +101,9 @@ const timeline = [
 ];
 
 const rewardTiers = [
-  { tier: "Bronze", pts: "200 MHP", reward: "Free lab test at partner clinic + 10% off next plan", color: "from-amber-700 to-amber-800" },
-  { tier: "Silver", pts: "500 MHP", reward: "Free HbA1c test + 1 free teleconsultation", color: "from-gray-400 to-gray-500" },
-  { tier: "Gold", pts: "1,000 MHP", reward: "90-day plan at 50% off + Priority access", color: "from-yellow-400 to-amber-500" },
+  { tier: "Bronze", pts: "1200 MHP", reward: "Free lab test at partner clinic + 10% off next plan", color: "from-amber-700 to-amber-800" },
+  { tier: "Silver", pts: "3000 MHP", reward: "Free HbA1c test + 1 free teleconsultation", color: "from-gray-400 to-gray-500" },
+  { tier: "Gold", pts: "5000 MHP", reward: "90-day plan at 50% off + Priority access", color: "from-yellow-400 to-amber-500" },
 ];
 
 const ProgramPlanSection = () => (

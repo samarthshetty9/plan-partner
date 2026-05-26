@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
-import { Activity, Plus, X, Upload } from "lucide-react";
+import { Activity, Plus, X, Upload, Pencil, Trash2 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { getVitalsAnalysis } from "@/lib/vitalsAnalysis";
 import { VitalsAnalysisCard } from "@/components/VitalsAnalysisCard";
@@ -41,6 +41,9 @@ const PatientVitals = () => {
   const [addBpUpper, setAddBpUpper] = useState("");
   const [addBpLower, setAddBpLower] = useState("");
   const [addNotes, setAddNotes] = useState("");
+  const [addDate, setAddDate] = useState("");
+  const [addTime, setAddTime] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [bulkRows, setBulkRows] = useState<BulkRow[]>([emptyBulkRow(), emptyBulkRow(), emptyBulkRow()]);
   const [savingBulk, setSavingBulk] = useState(false);
@@ -52,6 +55,35 @@ const PatientVitals = () => {
     return getVitalsAnalysis(sorted);
   }, [vitals]);
 
+  const openAddModal = () => {
+    setEditId(null);
+    setAddType("blood_pressure");
+    setAddValue("");
+    setAddBpUpper("");
+    setAddBpLower("");
+    setAddNotes("");
+    setAddDate(format(new Date(), "yyyy-MM-dd"));
+    setAddTime(format(new Date(), "HH:mm"));
+    setShowAdd(true);
+  };
+
+  const openEditModal = (vital: any) => {
+    setEditId(vital.id);
+    setAddType(vital.vital_type);
+    if (vital.vital_type === "blood_pressure") {
+      const parts = vital.value_text?.split("/") || [];
+      setAddBpUpper(parts[0] || "");
+      setAddBpLower(parts[1] || "");
+    } else {
+      setAddValue(vital.value_text || "");
+    }
+    setAddNotes(vital.notes || "");
+    const dateObj = new Date(vital.recorded_at);
+    setAddDate(format(dateObj, "yyyy-MM-dd"));
+    setAddTime(format(dateObj, "HH:mm"));
+    setShowAdd(true);
+  };
+
   const handleAddVital = async () => {
     const isBp = addType === "blood_pressure";
     const valueText = isBp ? `${addBpUpper.trim()}/${addBpLower.trim()}` : addValue.trim();
@@ -60,25 +92,46 @@ const PatientVitals = () => {
     setSaving(true);
     const vitalInfo = VITAL_TYPES.find(t => t.value === addType);
     const numericVal = isBp ? parseFloat(addBpUpper) : parseFloat(addValue);
+    
+    let recorded_at = undefined;
+    if (addDate && addTime) {
+      recorded_at = new Date(`${addDate}T${addTime}`).toISOString();
+    }
+    
+    const payload = {
+      vital_type: addType,
+      value_text: valueText,
+      value_numeric: Number.isFinite(numericVal) ? numericVal : null,
+      unit: vitalInfo?.unit || null,
+      notes: addNotes || null,
+      recorded_at,
+    };
+
     try {
-      await api.post("me/vitals", {
-        vital_type: addType,
-        value_text: valueText,
-        value_numeric: Number.isFinite(numericVal) ? numericVal : null,
-        unit: vitalInfo?.unit || null,
-        notes: addNotes || null,
-      });
-      toast({ title: "Vital added" });
+      if (editId) {
+        await api.patch(`me/vitals/${editId}`, payload);
+        toast({ title: "Vital updated" });
+      } else {
+        await api.post("me/vitals", payload);
+        toast({ title: "Vital added" });
+      }
       setShowAdd(false);
-      setAddValue("");
-      setAddBpUpper("");
-      setAddBpLower("");
-      setAddNotes("");
       queryClient.invalidateQueries({ queryKey: ["me", "vitals"] });
     } catch (err) {
       toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteVital = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this vital record?")) return;
+    try {
+      await api.delete(`me/vitals/${id}`);
+      toast({ title: "Vital deleted" });
+      queryClient.invalidateQueries({ queryKey: ["me", "vitals"] });
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to delete vital.", variant: "destructive" });
     }
   };
 
@@ -151,7 +204,7 @@ const PatientVitals = () => {
         </div>
         {user && (
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
+            <button onClick={openAddModal} className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
               <Plus className="w-4 h-4 shrink-0" /> Add Vital
             </button>
             <button onClick={() => setShowBulkAdd(true)} className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-primary text-primary font-semibold text-sm hover:bg-primary/10 transition-colors">
@@ -222,11 +275,11 @@ const PatientVitals = () => {
         <div className="fixed inset-0 bg-foreground/20 z-50 flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
           <div className="glass-card rounded-2xl p-4 sm:p-6 w-full max-w-[calc(100vw-2rem)] sm:max-w-md space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-heading font-bold text-foreground">Add Vital</h2>
+              <h2 className="text-lg font-heading font-bold text-foreground">{editId ? "Edit Vital" : "Add Vital"}</h2>
               <button onClick={() => setShowAdd(false)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-3">
-              <select value={addType} onChange={e => setAddType(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50">
+              <select value={addType} onChange={e => setAddType(e.target.value)} disabled={!!editId} className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50">
                 {VITAL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label} ({t.unit})</option>)}
               </select>
               {addType === "blood_pressure" ? (
@@ -243,13 +296,25 @@ const PatientVitals = () => {
               ) : (
                 <input placeholder={`Value (${VITAL_TYPES.find(t => t.value === addType)?.unit || ""})`} value={addValue} onChange={e => setAddValue(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
               )}
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Date</label>
+                  <input type="date" value={addDate} onChange={e => setAddDate(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Time</label>
+                  <input type="time" value={addTime} onChange={e => setAddTime(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                </div>
+              </div>
+              
               <input placeholder="Notes (optional)" value={addNotes} onChange={e => setAddNotes(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
               <button
                 onClick={handleAddVital}
                 disabled={saving || (addType === "blood_pressure" ? !addBpUpper.trim() || !addBpLower.trim() : !addValue.trim())}
                 className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
               >
-                {saving ? "Saving..." : "Save Vital"}
+                {saving ? "Saving..." : (editId ? "Update Vital" : "Save Vital")}
               </button>
             </div>
           </div>
@@ -308,6 +373,7 @@ const PatientVitals = () => {
                   <th className="text-left px-3 py-2.5 sm:px-4 sm:py-3 font-medium text-muted-foreground hidden sm:table-cell">Unit</th>
                   <th className="text-left px-3 py-2.5 sm:px-4 sm:py-3 font-medium text-muted-foreground">Date</th>
                   <th className="text-left px-3 py-2.5 sm:px-4 sm:py-3 font-medium text-muted-foreground hidden md:table-cell">Notes</th>
+                  <th className="w-16"></th>
                 </tr>
               </thead>
               <tbody>
@@ -316,8 +382,18 @@ const PatientVitals = () => {
                     <td className="px-3 py-2.5 sm:px-4 sm:py-3 font-medium text-foreground capitalize truncate">{v.vital_type.replace("_", " ")}</td>
                     <td className="px-3 py-2.5 sm:px-4 sm:py-3 font-heading font-bold text-foreground truncate">{v.value_text}</td>
                     <td className="px-3 py-2.5 sm:px-4 sm:py-3 text-muted-foreground hidden sm:table-cell">{v.unit || "—"}</td>
-                    <td className="px-3 py-2.5 sm:px-4 sm:py-3 text-muted-foreground text-xs sm:text-sm">{format(new Date(v.recorded_at), "MMM d, yyyy")}</td>
+                    <td className="px-3 py-2.5 sm:px-4 sm:py-3 text-muted-foreground text-xs sm:text-sm">{format(new Date(v.recorded_at), "MMM d, yyyy h:mm a")}</td>
                     <td className="px-3 py-2.5 sm:px-4 sm:py-3 text-muted-foreground hidden md:table-cell truncate max-w-[120px]">{v.notes || "—"}</td>
+                    <td className="px-2 py-2.5 sm:px-3 sm:py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openEditModal(v)} className="p-1.5 text-muted-foreground hover:text-primary rounded-md hover:bg-primary/10 transition-colors" title="Edit">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDeleteVital(v.id)} className="p-1.5 text-muted-foreground hover:text-destructive rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

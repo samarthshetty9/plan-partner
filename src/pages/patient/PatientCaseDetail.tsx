@@ -248,7 +248,7 @@ export default function PatientCaseDetail() {
         to="/patient/cases"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        <ChevronLeft className="w-4 h-4" /> Back to My Cases
+        <ChevronLeft className="w-4 h-4" /> Back to My Treatment Requests
       </Link>
 
       {/* Header */}

@@ -547,14 +547,19 @@ const FamilyConnectionSchema = new mongoose.Schema(
     patient_user_id: { type: String, required: true },
     family_user_id: { type: String, default: null }, // set when family signs up or accepts
     invite_email: { type: String, default: null }, // when inviting by email before signup
+    invite_phone: { type: String, default: null }, // when inviting by WhatsApp phone number
     relationship: { type: String, required: true, enum: ["son", "daughter", "spouse", "other"] },
     status: { type: String, default: "pending", enum: ["pending", "active"] },
+    access_vitals: { type: Boolean, default: true },
+    access_chat: { type: Boolean, default: false },
+    access_meds: { type: Boolean, default: true },
   },
   { timestamps: { createdAt: "created_at" }, toJSON: toJsonOptions }
 );
 FamilyConnectionSchema.index({ patient_user_id: 1 });
 FamilyConnectionSchema.index({ family_user_id: 1 });
 FamilyConnectionSchema.index({ invite_email: 1 });
+FamilyConnectionSchema.index({ invite_phone: 1 });
 
 /** Layer 4: Doctor message shown in patient app ("Dr. Sharma requested daily BP logging"). */
 const DoctorMessageSchema = new mongoose.Schema(
@@ -601,6 +606,7 @@ const MilestoneRewardSchema = new mongoose.Schema(
     unlocked_at: { type: Date, default: Date.now },
     claimed: { type: Boolean, default: false },
     claimed_at: { type: Date },
+    coupon_code: { type: String }, // For gamification reward claiming
   },
   { timestamps: { createdAt: "created_at" }, toJSON: toJsonOptions }
 );
@@ -1095,6 +1101,11 @@ const CarePlanAssignmentSchema = new mongoose.Schema(
       bronze: { type: Boolean, default: false },
       silver: { type: Boolean, default: false },
       gold: { type: Boolean, default: false },
+    },
+    reward_coupons: {
+      bronze: { type: String, default: "" },
+      silver: { type: String, default: "" },
+      gold: { type: String, default: "" },
     },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" }, toJSON: toJsonOptions }

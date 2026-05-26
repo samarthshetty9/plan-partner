@@ -91,9 +91,9 @@ async function main() {
         complete_30days: 200,
       },
       reward_tiers: [
-        { name: "Bronze", min_mhp: 200, reward: "Free BP monitoring kit + 10% off next plan", color: "#b45309" },
-        { name: "Silver", min_mhp: 500, reward: "Free HbA1c + Lipid panel + 1 free teleconsult", color: "#6b7280" },
-        { name: "Gold", min_mhp: 1000, reward: "90-day combo plan at 50% off + Mediimate Premium badge", color: "#d97706" },
+        { name: "Bronze", min_mhp: 1200, reward: "Free BP monitoring kit | 10% off next program plan", color: "#b45309" },
+        { name: "Silver", min_mhp: 3000, reward: "Free HbA1c + Lipid panel | 1 complimentary teleconsultation with the treating physician", color: "#6b7280" },
+        { name: "Gold", min_mhp: 5000, reward: "90-day Chronic Care Plan at 50% off | Mediimate Premium badge | Priority physician access", color: "#d97706" },
       ],
       week_themes: [
         { week: 1, theme: "Foundation & Baselines", goal: "Establish AM/PM BP + fasting sugar habit. Medication timing." },
@@ -209,7 +209,7 @@ async function main() {
     });
   }
 
-  const tier2 = mhp >= 1000 ? "Gold" : mhp >= 500 ? "Silver" : mhp >= 200 ? "Bronze" : null;
+  const tier2 = mhp >= 5000 ? "Gold" : mhp >= 3000 ? "Silver" : mhp >= 1200 ? "Bronze" : null;
 
   await CarePlanAssignment.create({
     careplan_id: plan2Id,

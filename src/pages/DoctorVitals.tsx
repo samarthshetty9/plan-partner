@@ -31,6 +31,7 @@ const DoctorVitals = () => {
   const [bulkRows, setBulkRows] = useState<BulkRow[]>([emptyBulkRow(), emptyBulkRow(), emptyBulkRow()]);
   const [saving, setSaving] = useState(false);
   const [savingBulk, setSavingBulk] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -248,39 +249,76 @@ const DoctorVitals = () => {
         </div>
       )}
 
-      {vitals.length === 0 ? (
-        <div className="glass-card rounded-xl p-12 text-center text-muted-foreground">
-          <Activity className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          No vitals recorded yet. Start by recording a patient's vitals.
+      <div className="grid lg:grid-cols-4 gap-6">
+        {/* Master: Patients List */}
+        <div className="glass-card rounded-xl p-4 lg:col-span-1 flex flex-col h-[600px]">
+          <h2 className="font-heading font-semibold text-foreground mb-4">Patients</h2>
+          {patients.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center">No patients found.</p>
+          ) : (
+            <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+              <button
+                onClick={() => setSelectedPatientId(null)}
+                className={`w-full text-left p-3 rounded-lg transition-colors border ${selectedPatientId === null ? "bg-primary/10 border-primary/30" : "hover:bg-muted border-transparent"}`}
+              >
+                <p className="font-medium text-sm text-foreground">All Patients</p>
+                <p className="text-xs text-muted-foreground">{vitals.length} total vitals</p>
+              </button>
+              {patients.map(p => {
+                const pVitals = vitals.filter(v => v.patient_id === p.id);
+                if (pVitals.length === 0) return null;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedPatientId(p.id)}
+                    className={`w-full text-left p-3 rounded-lg transition-colors border ${selectedPatientId === p.id ? "bg-primary/10 border-primary/30" : "hover:bg-muted border-transparent"}`}
+                  >
+                    <p className="font-medium text-sm text-foreground truncate">{p.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{pVitals.length} records</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="glass-card rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Patient</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Value</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Date</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vitals.map(v => (
-                  <tr key={v.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 font-medium text-foreground">{patients.find(p => p.id === v.patient_id)?.full_name || "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">{v.vital_type.replace("_", " ")}</td>
-                    <td className="px-4 py-3 font-heading font-bold text-foreground">{v.value_text} <span className="text-xs font-normal text-muted-foreground">{v.unit}</span></td>
-                    <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{format(new Date(v.recorded_at), "MMM d, yyyy")}</td>
-                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{v.notes || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+
+        {/* Detail: Vitals Table */}
+        <div className="lg:col-span-3">
+          {vitals.filter(v => !selectedPatientId || v.patient_id === selectedPatientId).length === 0 ? (
+            <div className="glass-card rounded-xl p-12 text-center text-muted-foreground">
+              <Activity className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              No vitals recorded yet. Start by recording a patient's vitals.
+            </div>
+          ) : (
+            <div className="glass-card rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      {!selectedPatientId && <th className="text-left px-4 py-3 font-medium text-muted-foreground">Patient</th>}
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">Value</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Date</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vitals.filter(v => !selectedPatientId || v.patient_id === selectedPatientId).map(v => (
+                      <tr key={v.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        {!selectedPatientId && <td className="px-4 py-3 font-medium text-foreground">{patients.find(p => p.id === v.patient_id)?.full_name || "—"}</td>}
+                        <td className="px-4 py-3 text-muted-foreground capitalize">{v.vital_type.replace("_", " ")}</td>
+                        <td className="px-4 py-3 font-heading font-bold text-foreground">{v.value_text} <span className="text-xs font-normal text-muted-foreground">{v.unit}</span></td>
+                        <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{format(new Date(v.recorded_at), "MMM d, yyyy")}</td>
+                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{v.notes || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

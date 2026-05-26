@@ -59,15 +59,7 @@ const BackedBySection = () => (
             key={p.category}
             className={`group rounded-2xl border ${p.accent} bg-background p-5 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300`}
           >
-            {p.logo ? (
-              <img src={p.logo} alt={p.name} className="h-10 sm:h-12 w-auto object-contain mb-4" />
-            ) : p.hospitals ? (
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                {p.hospitals.map((h) => (
-                  <img key={h.name} src={h.logo} alt={h.name} className="h-8 sm:h-10 w-auto object-contain" />
-                ))}
-              </div>
-            ) : null}
+
 
             <p className="text-xs font-bold text-primary/60 uppercase tracking-wider mb-1">{p.category}</p>
             <h3 className="text-lg font-heading font-bold text-foreground mb-3">{p.name}</h3>

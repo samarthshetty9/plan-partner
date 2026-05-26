@@ -56,6 +56,7 @@ const DoctorDocuments = () => {
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<DocDetail | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -343,46 +344,79 @@ const DoctorDocuments = () => {
         </div>
       )}
 
-      {documents.length === 0 ? (
-        <div className="glass-card rounded-xl p-12 text-center text-muted-foreground">
-          <Upload className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          No documents yet.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {documents.map(d => (
-            <div
-              key={d.id}
-              onClick={() => openDoc(d.id)}
-              className="glass-card rounded-xl p-4 flex items-center justify-between gap-4 cursor-pointer hover:shadow-md transition-shadow"
+      <div className="grid lg:grid-cols-4 gap-6">
+        {/* Master: Patients List */}
+        <div className="glass-card rounded-xl p-4 lg:col-span-1 flex flex-col h-[600px]">
+          <h2 className="font-heading font-semibold text-foreground mb-4">Patients</h2>
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+            <button
+              onClick={() => setSelectedPatientId(null)}
+              className={`w-full text-left p-3 rounded-lg transition-colors border ${selectedPatientId === null ? "bg-primary/10 border-primary/30" : "hover:bg-muted border-transparent"}`}
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <FileText className="w-5 h-5 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-medium text-sm text-foreground truncate">{d.file_name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                    <span className="font-medium">{patients.find(p => p.id === d.patient_id)?.full_name ?? "—"}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${categoryColors[d.category] || ""}`}>{d.category}</span>
-                    <span>{format(new Date(d.created_at), "MMM d, yyyy")}</span>
-                    {d.file_size_bytes && <span>{formatSize(d.file_size_bytes)}</span>}
-                    {d.analyzed_at && <span className="text-whatsapp">Analyzed</span>}
+              <p className="font-medium text-sm text-foreground">All Patients</p>
+              <p className="text-xs text-muted-foreground">{documents.length} total documents</p>
+            </button>
+            {patients.map(p => {
+              const pDocs = documents.filter(d => d.patient_id === p.id);
+              if (pDocs.length === 0) return null;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPatientId(p.id)}
+                  className={`w-full text-left p-3 rounded-lg transition-colors border ${selectedPatientId === p.id ? "bg-primary/10 border-primary/30" : "hover:bg-muted border-transparent"}`}
+                >
+                  <p className="font-medium text-sm text-foreground truncate">{p.full_name}</p>
+                  <p className="text-xs text-muted-foreground">{pDocs.length} documents</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Detail: Documents List */}
+        <div className="lg:col-span-3">
+          {documents.filter(d => !selectedPatientId || d.patient_id === selectedPatientId).length === 0 ? (
+            <div className="glass-card rounded-xl p-12 text-center text-muted-foreground">
+              <Upload className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              No documents yet.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {documents.filter(d => !selectedPatientId || d.patient_id === selectedPatientId).map(d => (
+                <div
+                  key={d.id}
+                  onClick={() => openDoc(d.id)}
+                  className="glass-card rounded-xl p-4 flex items-center justify-between gap-4 cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm text-foreground truncate">{d.file_name}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                        {!selectedPatientId && <span className="font-medium">{patients.find(p => p.id === d.patient_id)?.full_name ?? "—"}</span>}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${categoryColors[d.category] || ""}`}>{d.category}</span>
+                        <span>{format(new Date(d.created_at), "MMM d, yyyy")}</span>
+                        {d.file_size_bytes && <span>{formatSize(d.file_size_bytes)}</span>}
+                        {d.analyzed_at && <span className="text-whatsapp">Analyzed</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => downloadFile(d.id, d.file_name)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => deleteDoc(d.id)} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                <button onClick={() => downloadFile(d.id, d.file_name)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
-                  <Download className="w-4 h-4" />
-                </button>
-                <button onClick={() => deleteDoc(d.id)} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

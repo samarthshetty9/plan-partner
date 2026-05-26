@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
-import { Plus, X, FileText, Upload, ArrowLeft, Sparkles, BookOpen } from "lucide-react";
+import { api, API_BASE, getStoredToken } from "@/lib/api";
+import { Plus, X, FileText, Upload, ArrowLeft, Sparkles, BookOpen, Download } from "lucide-react";
 import { format } from "date-fns";
 import {
   BarChart, Bar, LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell, Legend,
@@ -56,6 +56,7 @@ const DoctorLabResults = () => {
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({ patient_id: "", test_name: "", result_value: "", reference_range: "", unit: "", status: "normal", notes: "" });
   const [saving, setSaving] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -87,9 +88,9 @@ const DoctorLabResults = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedPatientForReports) fetchReportsForPatient(selectedPatientForReports);
+    if (selectedPatientId) fetchReportsForPatient(selectedPatientId);
     else setReports([]);
-  }, [selectedPatientForReports, fetchReportsForPatient]);
+  }, [selectedPatientId, fetchReportsForPatient]);
 
   const handleUploadReport = useCallback(async (file: File) => {
     const isImage = file.type.startsWith("image/");
@@ -109,13 +110,13 @@ const DoctorLabResults = () => {
       setShowUpload(false);
       setUploadPatientId("");
       fetchData();
-      if (selectedPatientForReports === uploadPatientId) fetchReportsForPatient(uploadPatientId);
+      if (selectedPatientId === uploadPatientId) fetchReportsForPatient(uploadPatientId);
     } catch (err) {
       toast({ title: "Upload failed", description: (err as Error).message, variant: "destructive" });
     } finally {
       setUploading(false);
     }
-  }, [uploadPatientId, toast, fetchData, selectedPatientForReports, fetchReportsForPatient]);
+  }, [uploadPatientId, toast, fetchData, selectedPatientId, fetchReportsForPatient]);
 
   const openReport = async (reportId: string) => {
     try {
@@ -123,6 +124,24 @@ const DoctorLabResults = () => {
       setSelectedReport({ report: data.report, results: data.results || [] });
     } catch {
       toast({ title: "Could not load report", variant: "destructive" });
+    }
+  };
+
+  const downloadReport = async (reportId: string, fileName: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/lab_reports/${reportId}/file`, {
+        headers: { Authorization: `Bearer ${getStoredToken()}`, "X-Authorization": `Bearer ${getStoredToken()}` },
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Download failed", variant: "destructive" });
     }
   };
 
@@ -142,13 +161,28 @@ const DoctorLabResults = () => {
       });
       toast({ title: "Lab result added" });
       setShowForm(false);
-      setForm({ patient_id: "", test_name: "", result_value: "", reference_range: "", unit: "", status: "normal", notes: "" });
+      setForm({
+        patient_id: selectedPatientId || "",
+        test_name: "",
+        result_value: "",
+        reference_range: "",
+        unit: "",
+        status: "normal",
+        notes: "",
+      });
       fetchData();
     } catch (err) {
       toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
+  };
+
+  const formatBytes = (bytes: number | null) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1048576).toFixed(1)} MB`;
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>;
@@ -178,6 +212,9 @@ const DoctorLabResults = () => {
               <h2 className="text-lg font-heading font-bold text-foreground">{report.file_name || "Lab Report"}</h2>
               <p className="text-sm text-muted-foreground">{patientName} · {format(new Date(report.tested_at), "MMM d, yyyy")}</p>
             </div>
+            <button onClick={() => downloadReport(report.id, report.file_name || "lab_report")} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-muted/50 text-sm font-medium">
+              <Download className="w-4 h-4" /> Download Original
+            </button>
           </div>
 
           <h3 className="font-semibold text-foreground mb-2">Extracted values</h3>
@@ -359,32 +396,24 @@ const DoctorLabResults = () => {
       )}
 
       {/* View reports by patient */}
-      <div className="glass-card rounded-xl p-5">
-        <h2 className="text-lg font-heading font-semibold text-foreground mb-3">Lab reports by patient</h2>
-        <select value={selectedPatientForReports} onChange={(e) => setSelectedPatientForReports(e.target.value)} className="w-full max-w-xs px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50">
-          <option value="">Select patient to view reports...</option>
-          {patients.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-        </select>
-        {selectedPatientForReports && (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {reports.length === 0 ? (
-              <p className="text-sm text-muted-foreground col-span-2">No uploaded reports for this patient yet.</p>
-            ) : (
-              reports.map((r) => (
-                <button key={r.id} onClick={() => openReport(r.id)} className="glass-card rounded-xl p-4 text-left hover:shadow-md transition-shadow flex items-center gap-4 border border-transparent hover:border-primary/30">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <FileText className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-foreground truncate">{r.file_name || "Lab Report"}</p>
-                    <p className="text-xs text-muted-foreground">{format(new Date(r.tested_at), "MMM d, yyyy")}</p>
-                  </div>
-                </button>
-              ))
-            )}
+      {selectedPatientId && reports.length > 0 && (
+        <div className="glass-card rounded-xl p-5 mt-6">
+          <h2 className="text-lg font-heading font-semibold text-foreground mb-4">Lab reports for {patients.find(p => p.id === selectedPatientId)?.full_name}</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {reports.map((r) => (
+              <button key={r.id} onClick={() => openReport(r.id)} className="glass-card rounded-xl p-4 text-left hover:shadow-md transition-shadow flex items-center gap-4 border border-transparent hover:border-primary/30">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-foreground truncate">{r.file_name || "Lab Report"}</p>
+                  <p className="text-xs text-muted-foreground">{format(new Date(r.tested_at), "MMM d, yyyy")}</p>
+                </div>
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="fixed inset-0 bg-foreground/20 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
@@ -418,41 +447,78 @@ const DoctorLabResults = () => {
         </div>
       )}
 
-      {results.length === 0 ? (
-        <div className="glass-card rounded-xl p-12 text-center text-muted-foreground">
-          <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          No lab results yet. Upload a report or add one manually.
+      <div className="grid lg:grid-cols-4 gap-6">
+        {/* Master: Patients List */}
+        <div className="glass-card rounded-xl p-4 lg:col-span-1 flex flex-col h-[600px]">
+          <h2 className="font-heading font-semibold text-foreground mb-4">Patients</h2>
+          {patients.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center">No patients found.</p>
+          ) : (
+            <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+              <button
+                onClick={() => setSelectedPatientId(null)}
+                className={`w-full text-left p-3 rounded-lg transition-colors border ${selectedPatientId === null ? "bg-primary/10 border-primary/30" : "hover:bg-muted border-transparent"}`}
+              >
+                <p className="font-medium text-sm text-foreground">All Patients</p>
+                <p className="text-xs text-muted-foreground">{results.length} total results</p>
+              </button>
+              {patients.map(p => {
+                const pResults = results.filter(r => r.patient_id === p.id);
+                if (pResults.length === 0 && (!reports || !reports.some(r => r.patient_id === p.id))) return null;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedPatientId(p.id)}
+                    className={`w-full text-left p-3 rounded-lg transition-colors border ${selectedPatientId === p.id ? "bg-primary/10 border-primary/30" : "hover:bg-muted border-transparent"}`}
+                  >
+                    <p className="font-medium text-sm text-foreground truncate">{p.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{pResults.length} records</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="glass-card rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Patient</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Test</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Result</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Range</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map(r => (
-                  <tr key={r.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 font-medium text-foreground">{patients.find(p => p.id === r.patient_id)?.full_name || "—"}</td>
-                    <td className="px-4 py-3 text-foreground">{r.test_name}</td>
-                    <td className="px-4 py-3 font-heading font-bold text-foreground">{r.result_value} {r.unit && <span className="text-xs font-normal text-muted-foreground">{r.unit}</span>}</td>
-                    <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{r.reference_range || "—"}</td>
-                    <td className="px-4 py-3"><span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColors[r.status] || ""}`}>{r.status}</span></td>
-                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{format(new Date(r.tested_at), "MMM d, yyyy")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+
+        {/* Detail: Lab Results Table */}
+        <div className="lg:col-span-3">
+          {results.filter(r => !selectedPatientId || r.patient_id === selectedPatientId).length === 0 ? (
+            <div className="glass-card rounded-xl p-12 text-center text-muted-foreground">
+              <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              No lab results yet. Upload a report or add one manually.
+            </div>
+          ) : (
+            <div className="glass-card rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      {!selectedPatientId && <th className="text-left px-4 py-3 font-medium text-muted-foreground">Patient</th>}
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">Test</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">Result</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Range</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.filter(r => !selectedPatientId || r.patient_id === selectedPatientId).map(r => (
+                      <tr key={r.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        {!selectedPatientId && <td className="px-4 py-3 font-medium text-foreground">{patients.find(p => p.id === r.patient_id)?.full_name || "—"}</td>}
+                        <td className="px-4 py-3 text-foreground">{r.test_name}</td>
+                        <td className="px-4 py-3 font-heading font-bold text-foreground">{r.result_value} {r.unit && <span className="text-xs font-normal text-muted-foreground">{r.unit}</span>}</td>
+                        <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{r.reference_range || "—"}</td>
+                        <td className="px-4 py-3"><span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColors[r.status] || ""}`}>{r.status}</span></td>
+                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{format(new Date(r.tested_at), "MMM d, yyyy")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

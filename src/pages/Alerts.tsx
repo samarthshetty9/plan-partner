@@ -38,6 +38,7 @@ const typeConfig: Record<string, { icon: any; label: string; color: string }> = 
   abnormal_vital: { icon: Heart, label: "Abnormal Vital", color: "text-destructive" },
   no_show: { icon: CalendarX, label: "No-Show", color: "text-muted-foreground" },
   missed_medication: { icon: Bell, label: "Missed Medication", color: "text-accent" },
+  reminder_escalation: { icon: Bell, label: "Reminder Escalation", color: "text-accent" },
 };
 
 const severityColors: Record<string, string> = {
@@ -60,7 +61,7 @@ const Alerts = () => {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [filterType, setFilterType] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<string>("open");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolveNotes, setResolveNotes] = useState("");
 
@@ -86,10 +87,27 @@ const Alerts = () => {
     fetchAlerts();
   }, [fetchAlerts]);
 
+  useEffect(() => {
+    if (!user) return;
+    api.post("alerts/scan", {})
+      .then(() => {
+        fetchAlerts();
+      })
+      .catch((err) => {
+        console.error("Auto-scan on mount failed:", err);
+      });
+  }, [user]);
+
+
   const runScan = async () => {
     setScanning(true);
-    toast({ title: "Scan", description: "Alert scan can be run from the backend." });
-    fetchAlerts();
+    try {
+      const result = await api.post<{ scanned: boolean; created: number }>("alerts/scan", {});
+      toast({ title: "Scan complete", description: `${result.created} new alert(s) found.` });
+      fetchAlerts();
+    } catch (err) {
+      toast({ title: "Scan failed", description: (err as Error).message, variant: "destructive" });
+    }
     setScanning(false);
   };
 
@@ -199,6 +217,7 @@ const Alerts = () => {
           <option value="abnormal_vital">Abnormal Vitals</option>
           <option value="no_show">No-Show</option>
           <option value="missed_medication">Missed Medication</option>
+          <option value="reminder_escalation">Reminder Escalation</option>
         </select>
       </div>
 

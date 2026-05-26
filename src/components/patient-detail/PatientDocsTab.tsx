@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
 import { FileText, Download, Eye } from "lucide-react";
+import { API_BASE, getStoredToken } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface Doc {
   id: string;
@@ -31,6 +33,27 @@ const categoryColors: Record<string, string> = {
 const PatientDocsTab = ({ patientId, doctorId }: Props) => {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const downloadFile = async (docId: string, fileName: string) => {
+    const token = getStoredToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE}/patient_documents/${docId}/file`, {
+        headers: { Authorization: `Bearer ${token}`, "X-Authorization": `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName || "document";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Download failed", variant: "destructive" });
+    }
+  };
 
   useEffect(() => {
     const fetch = async () => {
@@ -101,7 +124,12 @@ const PatientDocsTab = ({ patientId, doctorId }: Props) => {
               </div>
             </div>
             {d.notes && <p className="text-xs text-muted-foreground line-clamp-2">{d.notes}</p>}
-            <p className="text-[10px] text-muted-foreground">{format(new Date(d.created_at), "MMM d, yyyy")}</p>
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+              <p className="text-[10px] text-muted-foreground">{format(new Date(d.created_at), "MMM d, yyyy")}</p>
+              <button onClick={() => downloadFile(d.id, d.file_name)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Download">
+                <Download className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         ))}
       </div>

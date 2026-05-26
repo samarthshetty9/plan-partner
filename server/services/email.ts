@@ -464,14 +464,59 @@ export async function sendDoctorMessageEmail(to: string, patientName: string, do
 export async function sendAppointmentBookedEmail(to: string, name: string, title: string, dateTime: string, userId?: string) {
   const html = wrapHtml("Appointment Booked", `
     <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${name},</p>
-    <p style="margin:0 0 16px;font-size:15px;color:#374151;">Your appointment has been booked successfully:</p>
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">Your appointment has been confirmed and scheduled successfully:</p>
     <div style="background:#f0fdf4;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #16a34a;">
       <p style="margin:0 0 4px;font-size:14px;color:#374151;"><strong>${title || "Appointment"}</strong></p>
       <p style="margin:0;font-size:14px;color:#374151;">${dateTime}</p>
     </div>
     <p style="margin:0;font-size:14px;color:#6b7280;">We'll send you a reminder before your appointment.</p>
   `);
-  return sendEmail({ to, subject: `Appointment Booked: ${title || "Upcoming"}`, html, template: "appointment_booked", userId });
+  return sendEmail({ to, subject: `Appointment Confirmed: ${title || "Upcoming"}`, html, template: "appointment_booked", userId });
+}
+
+// ─── Template: Appointment Requested (Patient) ──────────────────
+export async function sendAppointmentRequestedEmail(to: string, name: string, title: string, dateTime: string, userId?: string) {
+  const html = wrapHtml("Appointment Request Received", `
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${name},</p>
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">Your appointment request has been submitted successfully and is pending doctor approval:</p>
+    <div style="background:#eff6ff;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #3b82f6;">
+      <p style="margin:0 0 4px;font-size:14px;color:#374151;"><strong>${title || "Appointment"}</strong></p>
+      <p style="margin:0;font-size:14px;color:#374151;">${dateTime}</p>
+    </div>
+    <p style="margin:0;font-size:14px;color:#6b7280;">We will notify you by email as soon as your doctor reviews and approves the request.</p>
+  `);
+  return sendEmail({ to, subject: `Appointment Request Submitted: ${title || "Visit"}`, html, template: "appointment_requested", userId });
+}
+
+// ─── Template: Appointment Request Doctor Notification ─────────
+export async function sendAppointmentRequestDoctorEmail(to: string, doctorName: string, patientName: string, title: string, dateTime: string, userId?: string) {
+  const html = wrapHtml("New Appointment Request", `
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi Dr. ${doctorName},</p>
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">A patient has requested a new appointment slot:</p>
+    <div style="background:#eff6ff;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #3b82f6;">
+      <p style="margin:0 0 4px;font-size:14px;color:#374151;"><strong>Patient:</strong> ${patientName}</p>
+      <p style="margin:0 0 4px;font-size:14px;color:#374151;"><strong>Reason:</strong> ${title}</p>
+      <p style="margin:0;font-size:14px;color:#374151;"><strong>Requested Slot:</strong> ${dateTime}</p>
+    </div>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="https://mediimate.in/dashboard/appointments" style="display:inline-block;background:#3b82f6;color:#ffffff;text-decoration:none;padding:12px 32px;border-radius:8px;font-weight:600;font-size:14px;">Review Request →</a>
+    </div>
+  `);
+  return sendEmail({ to, subject: `Action Required: New Appointment Request from ${patientName}`, html, template: "appointment_request_doctor", userId });
+}
+
+// ─── Template: Appointment Declined (Patient) ───────────────────
+export async function sendAppointmentDeclinedEmail(to: string, name: string, title: string, dateTime: string, userId?: string) {
+  const html = wrapHtml("Appointment Request Declined", `
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${name},</p>
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">We regret to inform you that your doctor is unable to accept your requested appointment slot at this time:</p>
+    <div style="background:#fef2f2;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #ef4444;">
+      <p style="margin:0 0 4px;font-size:14px;color:#374151;"><strong>${title || "Appointment"}</strong></p>
+      <p style="margin:0;font-size:14px;color:#374151;">${dateTime}</p>
+    </div>
+    <p style="margin:0;font-size:14px;color:#6b7280;">Please go to the app's Appointments page to choose another available time slot or contact your doctor's office.</p>
+  `);
+  return sendEmail({ to, subject: `Appointment Request Declined: ${title || "Visit"}`, html, template: "appointment_declined", userId });
 }
 
 // ─── Template: Appointment Completed ────────────────────────────

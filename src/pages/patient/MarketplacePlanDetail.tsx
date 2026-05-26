@@ -1,4 +1,6 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { toast } from "sonner";
 import { MARKETPLACE_PLANS } from "@/data/marketplace-plans";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,8 @@ import {
 
 export default function MarketplacePlanDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const [isEnrolling, setIsEnrolling] = useState(false);
   const plan = MARKETPLACE_PLANS.find(p => p.id === id);
 
   if (!plan) {
@@ -36,6 +40,16 @@ export default function MarketplacePlanDetail() {
 
   // Days that are unlocked for preview
   const UNLOCKED_DAYS = [1, 2, 7, 9, 11];
+
+  const handleEnroll = async () => {
+    setIsEnrolling(true);
+    // Simulate API call
+    setTimeout(() => {
+      setIsEnrolling(false);
+      toast.success("Successfully enrolled in " + plan.name + "!");
+      navigate("/patient/care-plan");
+    }, 1000);
+  };
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-20">
@@ -105,8 +119,8 @@ export default function MarketplacePlanDetail() {
                </div>
             </div>
 
-            <Button className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-black text-lg rounded-xl shadow-lg shadow-slate-200 group">
-              ENROLL NOW
+            <Button onClick={handleEnroll} disabled={isEnrolling} className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-black text-lg rounded-xl shadow-lg shadow-slate-200 group">
+              {isEnrolling ? "ENROLLING..." : "ENROLL NOW"}
               <Zap className="w-5 h-5 ml-2 text-amber-400 fill-amber-400 group-hover:scale-125 transition-transform" />
             </Button>
             <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-wider">
@@ -234,8 +248,8 @@ export default function MarketplacePlanDetail() {
       {/* FAQ/CTA */}
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
          <h2 className="text-2xl font-black text-slate-800">Ready to transform?</h2>
-         <Button size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-10 h-14 rounded-2xl shadow-xl shadow-emerald-100">
-           ENROLL IN THIS PLAN
+         <Button onClick={handleEnroll} disabled={isEnrolling} size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-10 h-14 rounded-2xl shadow-xl shadow-emerald-100">
+           {isEnrolling ? "ENROLLING..." : "ENROLL IN THIS PLAN"}
          </Button>
          <p className="text-xs text-slate-400 font-bold">CANCEL ATT ANYTIME • NO QUESTIONS ASKED</p>
       </div>

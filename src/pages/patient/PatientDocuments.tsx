@@ -44,7 +44,7 @@ interface DocDetail {
   analyzed_at?: string | null;
 }
 
-const PatientDocuments = () => {
+const PatientDocuments = ({ isEmbedded }: { isEmbedded?: boolean }) => {
   const { toast } = useToast();
   const { patientId, loading: patientLoading } = usePatientRecord();
   const [documents, setDocuments] = useState<any[]>([]);
@@ -272,17 +272,26 @@ const PatientDocuments = () => {
 
   return (
     <div className="w-full max-w-full min-w-0 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-heading font-bold text-foreground truncate">Documents</h1>
-          <p className="text-muted-foreground text-sm">{documents.length} documents</p>
+      {!isEmbedded && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-heading font-bold text-foreground truncate">Documents</h1>
+            <p className="text-muted-foreground text-sm">{documents.length} documents</p>
+          </div>
+          {patientId && (
+            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
+              <Plus className="w-4 h-4" /> Upload Document
+            </button>
+          )}
         </div>
-        {patientId && (
+      )}
+      {isEmbedded && patientId && (
+        <div className="flex justify-end">
           <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
             <Plus className="w-4 h-4" /> Upload Document
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {showUpload && (
         <div className="fixed inset-0 bg-foreground/20 z-50 flex items-center justify-center p-4" onClick={() => setShowUpload(false)}>
